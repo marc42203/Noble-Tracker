@@ -7533,46 +7533,45 @@ function renderAnalytics(){
     </div>`;
   }
 
-  // ── Hero Focus ─────────────────────────────────────────────────────────
-  var _hfHeroes = (function(){
-    var seen = {}, list = [];
-    ['ow','rv'].forEach(function(g){
-      var roles = g==='ow' ? OW_ROLES : RV_ROLES;
-      roles.forEach(function(role){
-        (db[g][role]||[]).forEach(function(d){
-          if(d.char && !seen[d.char]){ seen[d.char]=1; list.push(d.char); }
-        });
+  // ── Per-game Hero Focus builder ────────────────────────────────────────
+  function buildHeroFocusSection(g){
+    var roles = g==='ow' ? OW_ROLES : RV_ROLES;
+    var seen = {}, heroes = [];
+    roles.forEach(function(role){
+      (db[g][role]||[]).forEach(function(d){
+        if(d.char && !seen[d.char]){ seen[d.char]=1; heroes.push(d.char); }
       });
     });
-    return list.sort(function(a,b){return a.localeCompare(b);});
-  })();
-  var _hfItems = _hfHeroes.map(function(h){
-    var sp = h.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
-    var safeH = h.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return '<div class="hero-focus-dd-item" onclick="selectHeroFocus(\'' + safeH + '\')">' +
-      '<img class="hero-focus-dd-img" src="/sprites/sp_'+sp+'.png" onerror="this.style.display=\'none\'" loading="lazy">' +
-      '<span>'+esc(h)+'</span></div>';
-  }).join('');
-  var heroFocusHtml = '<div class="analytics-section">' +
-    '<div class="analytics-section-title">Hero Focus</div>' +
-    '<div class="hero-focus-search-row">' +
-      '<div class="hero-focus-search-wrap">' +
-        '<input class="hero-focus-input" id="hero-focus-input" type="text" placeholder="Search hero…" autocomplete="off"' +
-          ' oninput="onHeroFocusInput(this.value)" onfocus="onHeroFocusInput(this.value)"' +
-          ' onblur="setTimeout(function(){var d=document.getElementById(\'hero-focus-dropdown\');if(d)d.style.display=\'none\';},150)">' +
-        '<div class="hero-focus-dropdown" id="hero-focus-dropdown" style="display:none">'+_hfItems+'</div>' +
+    heroes.sort(function(a,b){return a.localeCompare(b);});
+    if(!heroes.length) return '';
+    var items = heroes.map(function(h){
+      var sp = h.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+      var safeH = h.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return '<div class="hero-focus-dd-item" onclick="selectHeroFocus(\''+safeH+'\',\''+g+'\')">' +
+        '<img class="hero-focus-dd-img" src="/sprites/sp_'+sp+'.png" onerror="this.style.display=\'none\'" loading="lazy">' +
+        '<span>'+esc(h)+'</span></div>';
+    }).join('');
+    return '<div class="analytics-section">' +
+      '<div class="analytics-section-title">Hero Focus</div>' +
+      '<div class="hero-focus-search-row">' +
+        '<div class="hero-focus-search-wrap">' +
+          '<input class="hero-focus-input" id="hf-input-'+g+'" type="text" placeholder="Search hero…" autocomplete="off"' +
+            ' oninput="onHeroFocusInput(this.value,\''+g+'\')" onfocus="onHeroFocusInput(this.value,\''+g+'\')"' +
+            ' onblur="setTimeout(function(){var d=document.getElementById(\'hf-dd-'+g+'\');if(d)d.style.display=\'none\';},150)">' +
+          '<div class="hero-focus-dropdown" id="hf-dd-'+g+'" style="display:none">'+items+'</div>' +
+        '</div>' +
+        '<div class="hero-focus-portrait" id="hf-portrait-'+g+'"><span>—</span></div>' +
       '</div>' +
-      '<div class="hero-focus-portrait" id="hero-focus-portrait"><span>—</span></div>' +
-    '</div>' +
-    '<div id="hero-focus-stats"></div>' +
-    '<div id="hero-focus-chart-wrap" style="display:none">' +
-      '<div class="hero-focus-metric-row" id="hero-focus-metric-row"></div>' +
-      '<div class="analytics-chart-card"><div style="height:220px"><canvas id="hero-focus-canvas"></canvas></div></div>' +
-    '</div>' +
-  '</div>';
+      '<div id="hf-stats-'+g+'"></div>' +
+      '<div id="hf-chart-wrap-'+g+'" style="display:none">' +
+        '<div class="hero-focus-metric-row" id="hf-metric-row-'+g+'"></div>' +
+        '<div class="analytics-chart-card"><div style="height:220px"><canvas id="hf-canvas-'+g+'"></canvas></div></div>' +
+      '</div>' +
+    '</div>';
+  }
 
-  const owChartsHtml = buildChartTiles('Overwatch', owAll, 'ow');
-  const rvChartsHtml = buildChartTiles('Marvel Rivals', rvAll, 'rv');
+  const owChartsHtml = buildChartTiles('Overwatch', owAll, 'ow') + buildHeroFocusSection('ow');
+  const rvChartsHtml = buildChartTiles('Marvel Rivals', rvAll, 'rv') + buildHeroFocusSection('rv');
   const hdChartsHtml = buildChartTiles('Helldivers 2', hdAll, 'hd');
 
   // ── Role distribution doughnuts ─────────────────────────────────────────
@@ -7621,7 +7620,6 @@ function renderAnalytics(){
       <div class="analytics-section-title">Overview</div>
       ${summaryHtml}
     </div>
-    ${heroFocusHtml}
     ${owChartsHtml}
     ${rvChartsHtml}
     ${hdChartsHtml}
@@ -7643,8 +7641,8 @@ function renderAnalytics(){
   setTimeout(()=>{
     _drawAnalyticsBar('ac-kills-bar', barLabels, barValues, barColors, barBg, 'Avg Kills');
     _drawAnalyticsBar('ac-damage-bar', barLabels, dmgBarValues, barColors, barBg, 'Avg Damage');
-    _drawAnalyticsDonut('ac-ow-donut', owAll.map(r=>r.data.length), owAll.map(r=>r.role), owAll.map(r=>r.color));
-    _drawAnalyticsDonut('ac-rv-donut', rvAll.map(r=>r.data.length), rvAll.map(r=>r.role), rvAll.map(r=>r.color));
+    _drawAnalyticsDonut('ac-overwatch-donut', owAll.map(r=>r.data.length), owAll.map(r=>r.role), owAll.map(r=>r.color));
+    _drawAnalyticsDonut('ac-marvel-rivals-donut', rvAll.map(r=>r.data.length), rvAll.map(r=>r.role), rvAll.map(r=>r.color));
   }, 0);
 }
 
@@ -7727,53 +7725,54 @@ function _drawAnalyticsDonut(canvasId, values, labels, colors){
 }
 
 // ── HERO FOCUS ──────────────────────────────────────────────────────────────────
-var heroFocusChart = null;
-var heroFocusState = { hero: null, metric: 'kills' };
+var heroFocusCharts = {};
+var heroFocusState  = { ow: { hero: null, metric: 'kills' }, rv: { hero: null, metric: 'kills' } };
 
-function onHeroFocusInput(val){
-  const dropdown = document.getElementById('hero-focus-dropdown');
+function onHeroFocusInput(val, g){
+  var dropdown = document.getElementById('hf-dd-'+g);
   if(!dropdown) return;
-  const q = val.toLowerCase().trim();
+  var q = val.toLowerCase().trim();
   if(!q){ dropdown.style.display='none'; return; }
-  const items = Array.from(dropdown.querySelectorAll('.hero-focus-dd-item'));
-  let visible = 0;
-  items.forEach(item=>{
-    const span = item.querySelector('span');
-    const name = span ? span.textContent.toLowerCase() : '';
-    const show = name.includes(q);
+  var items = Array.from(dropdown.querySelectorAll('.hero-focus-dd-item'));
+  var visible = 0;
+  items.forEach(function(item){
+    var span = item.querySelector('span');
+    var name = span ? span.textContent.toLowerCase() : '';
+    var show = name.includes(q);
     item.style.display = show ? '' : 'none';
     if(show) visible++;
   });
   dropdown.style.display = visible ? 'block' : 'none';
 }
 
-function selectHeroFocus(heroName){
-  heroFocusState.hero = heroName;
-  const input = document.getElementById('hero-focus-input');
+function selectHeroFocus(heroName, g){
+  heroFocusState[g].hero = heroName;
+  var input = document.getElementById('hf-input-'+g);
   if(input) input.value = heroName;
-  const sp = heroName.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
-  const portrait = document.getElementById('hero-focus-portrait');
-  if(portrait) portrait.innerHTML = '<img src="/sprites/sp_'+sp+'.png" onerror="this.src=\''+'/sprites/sp_pokeball_icon.png\'" style="width:100%;height:100%;object-fit:cover">';
-  renderHeroFocusStats();
+  var sp = heroName.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+  var portrait = document.getElementById('hf-portrait-'+g);
+  if(portrait) portrait.innerHTML = '<img src="/sprites/sp_'+sp+'.png" onerror="this.src=\'/sprites/sp_pokeball_icon.png\'" style="width:100%;height:100%;object-fit:cover">';
+  renderHeroFocusStats(g);
 }
 
-function _hfGetSessions(hero){
-  const sessions = [];
-  ['ow','rv'].forEach(g=>{
-    const roles = g==='ow' ? OW_ROLES : RV_ROLES;
-    roles.forEach(role=>{
-      (db[g][role]||[]).filter(d=>d.char===hero).forEach(d=>sessions.push(Object.assign({},d,{_g:g,_role:role})));
+function _hfGetSessions(hero, g){
+  var sessions = [];
+  var roles = g==='ow' ? OW_ROLES : RV_ROLES;
+  roles.forEach(function(role){
+    (db[g][role]||[]).filter(function(d){return d.char===hero;}).forEach(function(d){
+      sessions.push(Object.assign({},d,{_g:g,_role:role}));
     });
   });
   return sessions;
 }
 
-function renderHeroFocusStats(){
-  const hero = heroFocusState.hero;
+function renderHeroFocusStats(g){
+  var state = heroFocusState[g];
+  var hero = state.hero;
   if(!hero) return;
-  const allSessions = _hfGetSessions(hero);
-  const statsEl = document.getElementById('hero-focus-stats');
-  const wrapEl  = document.getElementById('hero-focus-chart-wrap');
+  var allSessions = _hfGetSessions(hero, g);
+  var statsEl = document.getElementById('hf-stats-'+g);
+  var wrapEl  = document.getElementById('hf-chart-wrap-'+g);
   if(!allSessions.length){
     if(statsEl) statsEl.innerHTML = '<div class="analytics-empty">No sessions recorded for '+esc(hero)+'.</div>';
     if(wrapEl)  wrapEl.style.display='none';
@@ -7781,10 +7780,10 @@ function renderHeroFocusStats(){
   }
   function avg(arr){ return arr.length ? arr.reduce(function(a,b){return a+b;},0)/arr.length : 0; }
   function fmt1(v){ return v>=1000?Math.round(v).toLocaleString():v.toFixed(v===Math.floor(v)?0:1); }
-  const kills  = allSessions.map(function(d){return d.kills||0;});
-  const deaths = allSessions.map(function(d){return d.deaths||0;});
-  const dmg    = allSessions.map(function(d){return d.damage||0;});
-  const heal   = allSessions.map(function(d){return d.healing||0;});
+  var kills  = allSessions.map(function(d){return d.kills||0;});
+  var deaths = allSessions.map(function(d){return d.deaths||0;});
+  var dmg    = allSessions.map(function(d){return d.damage||0;});
+  var heal   = allSessions.map(function(d){return d.healing||0;});
   if(statsEl) statsEl.innerHTML = '<div class="analytics-stat-grid" style="margin-top:4px">' +
     _aStatCard('Sessions', allSessions.length, '') +
     _aStatCard('Avg Kills', fmt1(avg(kills)), 'per session') +
@@ -7793,49 +7792,49 @@ function renderHeroFocusStats(){
     _aStatCard('Avg Healing', fmt1(avg(heal)), 'per session') +
     _aStatCard('Best Kills', Math.max.apply(null, kills.concat([0])), '') +
     '</div>';
-  const metricDefs = [
+  var metricDefs = [
     {k:'kills',l:'Kills'},{k:'deaths',l:'Deaths'},{k:'damage',l:'Damage'},
     {k:'healing',l:'Healing'},{k:'kd',l:'K/D'}
   ].filter(function(m){
     if(m.k==='kd') return deaths.some(function(v){return v>0;});
     return allSessions.some(function(d){return (d[m.k]||0)>0;});
   });
-  if(!metricDefs.find(function(m){return m.k===heroFocusState.metric;})) heroFocusState.metric='kills';
-  const metricRow = document.getElementById('hero-focus-metric-row');
+  if(!metricDefs.find(function(m){return m.k===state.metric;})) state.metric='kills';
+  var metricRow = document.getElementById('hf-metric-row-'+g);
   if(metricRow) metricRow.innerHTML = metricDefs.map(function(m){
-    return '<button class="cex-pill'+(heroFocusState.metric===m.k?' active':'')+'" onclick="heroFocusSetMetric(this.dataset.m)" data-m="'+m.k+'">'+m.l+'</button>';
+    return '<button class="cex-pill'+(state.metric===m.k?' active':'')+'" onclick="heroFocusSetMetric(this.dataset.m,\''+g+'\')" data-m="'+m.k+'">'+m.l+'</button>';
   }).join('');
   if(wrapEl) wrapEl.style.display='';
-  setTimeout(function(){ renderHeroFocusChart(allSessions); }, 0);
+  setTimeout(function(){ renderHeroFocusChart(allSessions, g); }, 0);
 }
 
-function heroFocusSetMetric(m){
-  heroFocusState.metric = m;
-  document.querySelectorAll('#hero-focus-metric-row .cex-pill').forEach(function(p){
+function heroFocusSetMetric(m, g){
+  heroFocusState[g].metric = m;
+  document.querySelectorAll('#hf-metric-row-'+g+' .cex-pill').forEach(function(p){
     p.classList.toggle('active', p.dataset.m===m);
   });
-  const hero = heroFocusState.hero;
+  var hero = heroFocusState[g].hero;
   if(!hero) return;
-  renderHeroFocusChart(_hfGetSessions(hero));
+  renderHeroFocusChart(_hfGetSessions(hero, g), g);
 }
 
-function renderHeroFocusChart(sessions){
-  const canvas = document.getElementById('hero-focus-canvas');
+function renderHeroFocusChart(sessions, g){
+  var canvas = document.getElementById('hf-canvas-'+g);
   if(!canvas) return;
-  if(heroFocusChart){ heroFocusChart.destroy(); heroFocusChart=null; }
-  const metric = heroFocusState.metric;
-  const metricFn = metric==='kd'
+  if(heroFocusCharts[g]){ heroFocusCharts[g].destroy(); heroFocusCharts[g]=null; }
+  var metric = heroFocusState[g].metric;
+  var metricFn = metric==='kd'
     ? function(d){return d.deaths?+(d.kills/d.deaths).toFixed(2):d.kills||0;}
     : function(d){return d[metric]||0;};
-  const metricLabel = {kills:'Kills',deaths:'Deaths',damage:'Damage',healing:'Healing',kd:'K/D'}[metric]||metric;
-  const isLight = document.documentElement.getAttribute('data-theme')==='light';
-  const gridColor = isLight?'rgba(0,0,0,.07)':'rgba(255,255,255,.05)';
-  const tickColor = isLight?'#888':'#5a5a70';
-  const tooltipBg = isLight?'#ffffff':'#1a1a24';
-  const color = '#a78bfa';
-  const labels = sessions.map(function(_,i){return '#'+(i+1);});
-  const values = sessions.map(metricFn);
-  heroFocusChart = new Chart(canvas.getContext('2d'),{
+  var metricLabel = {kills:'Kills',deaths:'Deaths',damage:'Damage',healing:'Healing',kd:'K/D'}[metric]||metric;
+  var isLight = document.documentElement.getAttribute('data-theme')==='light';
+  var gridColor = isLight?'rgba(0,0,0,.07)':'rgba(255,255,255,.05)';
+  var tickColor = isLight?'#888':'#5a5a70';
+  var tooltipBg = isLight?'#ffffff':'#1a1a24';
+  var color = g==='ow'?'#f97316':'#a855f7';
+  var labels = sessions.map(function(_,i){return '#'+(i+1);});
+  var values = sessions.map(metricFn);
+  heroFocusCharts[g] = new Chart(canvas.getContext('2d'),{
     type:'line',
     data:{labels:labels,datasets:[{
       label:metricLabel,data:values,
