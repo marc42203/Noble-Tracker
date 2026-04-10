@@ -5159,11 +5159,16 @@ function isExceptional(g, role, d) {
 // ── HERO IMAGE HELPER ─────────────────────────────────────────────────────
 function getExcSrc(name){
   const safe = name.replace(/[^a-zA-Z0-9]/g,'_');
-  // Try exact match first, then common variations
   const variants = [safe, safe.replace(/_+/g,'_')];
   for(const v of variants){
     const el = document.getElementById('exc_'+v);
     if(el) return el.src;
+  }
+  // Case-insensitive fallback (handles D.Va, Torbjörn, etc.)
+  const norm = name.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const all = document.querySelectorAll('[id^="exc_"]');
+  for(let i=0;i<all.length;i++){
+    if(all[i].id.replace('exc_','').toLowerCase().replace(/[^a-z0-9]/g,'')===norm) return all[i].src;
   }
   return null;
 }
