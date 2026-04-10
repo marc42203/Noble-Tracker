@@ -36,6 +36,8 @@
 <body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://unpkg.com/tesseract.js@v4.1.1/dist/tesseract.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -12901,59 +12903,54 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
-  from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js';
+<script>
+(function(){
+  firebase.initializeApp({
+    apiKey: "AIzaSyB8J6D8UMnfGhVJBAhbnEw5z0rMCawCEA4",
+    authDomain: "noble-tracker-63aca.firebaseapp.com",
+    projectId: "noble-tracker-63aca",
+    storageBucket: "noble-tracker-63aca.firebasestorage.app",
+    messagingSenderId: "792113114525",
+    appId: "1:792113114525:web:d45ad107410312dc53d374"
+  });
 
-const _fbApp = initializeApp({
-  apiKey: "AIzaSyB8J6D8UMnfGhVJBAhbnEw5z0rMCawCEA4",
-  authDomain: "noble-tracker-63aca.firebaseapp.com",
-  projectId: "noble-tracker-63aca",
-  storageBucket: "noble-tracker-63aca.firebasestorage.app",
-  messagingSenderId: "792113114525",
-  appId: "1:792113114525:web:d45ad107410312dc53d374"
-});
-const _fbAuth = getAuth(_fbApp);
-const _fbProvider = new GoogleAuthProvider();
+  var _auth     = firebase.auth();
+  var _provider = new firebase.auth.GoogleAuthProvider();
 
-const loginScreen = document.getElementById('nt-login-screen');
-const signInBtn   = document.getElementById('nt-sign-in-btn');
-const signOutBtn  = document.getElementById('nt-sign-out-btn');
-const userAvatar  = document.getElementById('nt-user-avatar');
-const userName    = document.getElementById('nt-user-name');
-const loginError  = document.getElementById('nt-login-error');
+  var loginScreen = document.getElementById('nt-login-screen');
+  var signInBtn   = document.getElementById('nt-sign-in-btn');
+  var signOutBtn  = document.getElementById('nt-sign-out-btn');
+  var userAvatar  = document.getElementById('nt-user-avatar');
+  var userName    = document.getElementById('nt-user-name');
+  var loginError  = document.getElementById('nt-login-error');
+  var _signInHtml = signInBtn ? signInBtn.innerHTML : '';
 
-const _signInSvg = signInBtn.innerHTML;
+  if(signInBtn) signInBtn.addEventListener('click', function(){
+    signInBtn.disabled = true;
+    signInBtn.textContent = 'Signing in\u2026';
+    if(loginError) loginError.textContent = '';
+    _auth.signInWithPopup(_provider).catch(function(err){
+      console.error('Sign-in error:', err);
+      signInBtn.disabled = false;
+      signInBtn.innerHTML = _signInHtml;
+      if(loginError) loginError.textContent = 'Sign-in failed: ' + (err.code || err.message);
+    });
+  });
 
-signInBtn.addEventListener('click', async () => {
-  signInBtn.disabled = true;
-  signInBtn.textContent = 'Signing in…';
-  if (loginError) loginError.textContent = '';
-  try {
-    await signInWithPopup(_fbAuth, _fbProvider);
-  } catch (err) {
-    console.error('Sign-in error:', err);
-    signInBtn.disabled = false;
-    signInBtn.innerHTML = _signInSvg;
-    if (loginError) loginError.textContent = `Sign-in failed: ${err.code ?? err.message}`;
-  }
-});
+  if(signOutBtn) signOutBtn.addEventListener('click', function(){ _auth.signOut(); });
 
-signOutBtn?.addEventListener('click', () => signOut(_fbAuth));
-
-onAuthStateChanged(_fbAuth, (user) => {
-  window.__ntUser = user ?? null;
-  if (user) {
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (userAvatar) { userAvatar.src = user.photoURL ?? ''; userAvatar.style.display = user.photoURL ? '' : 'none'; }
-    if (userName)   userName.textContent = user.displayName ?? user.email ?? '';
-  } else {
-    if (loginScreen) loginScreen.style.display = '';
-    signInBtn.disabled = false;
-    signInBtn.innerHTML = _signInSvg;
-  }
-});
+  _auth.onAuthStateChanged(function(user){
+    window.__ntUser = user || null;
+    if(user){
+      if(loginScreen) loginScreen.style.display = 'none';
+      if(userAvatar){ userAvatar.src = user.photoURL || ''; userAvatar.style.display = user.photoURL ? '' : 'none'; }
+      if(userName)   userName.textContent = user.displayName || user.email || '';
+    } else {
+      if(loginScreen) loginScreen.style.display = '';
+      if(signInBtn){ signInBtn.disabled = false; signInBtn.innerHTML = _signInHtml; }
+    }
+  });
+})();
 </script>
 </body>
 </html>
