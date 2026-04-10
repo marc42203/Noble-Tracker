@@ -385,13 +385,9 @@ tbody tr.exceptional:hover{background:linear-gradient(90deg,rgba(251,191,36,.1) 
 .analytics-chart-card h4{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin:0 0 12px}
 .analytics-chart-inner{height:200px}
 .analytics-donut-wrap{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-.analytics-donut-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;align-items:center}
-.analytics-donut-card h4{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin:0 0 12px;align-self:flex-start}
-.analytics-donut-inner{height:160px;width:160px}
-.analytics-legend{display:flex;flex-direction:column;gap:5px;margin-top:10px;align-self:flex-start;width:100%}
-.analytics-legend-item{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2)}
-.analytics-legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-.analytics-legend-count{margin-left:auto;color:var(--text3);font-size:10px}
+.analytics-donut-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;display:flex;flex-direction:column}
+.analytics-donut-card h4{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin:0 0 12px}
+.analytics-donut-inner{height:220px;width:100%}
 .analytics-stat-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
 .analytics-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px}
 .analytics-stat-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px}
@@ -7573,7 +7569,7 @@ function renderAnalytics(){
     '</div>' +
   '</div>';
 
-    const owChartsHtml = buildChartTiles('Overwatch', owAll, 'ow');
+  const owChartsHtml = buildChartTiles('Overwatch', owAll, 'ow');
   const rvChartsHtml = buildChartTiles('Marvel Rivals', rvAll, 'rv');
   const hdChartsHtml = buildChartTiles('Helldivers 2', hdAll, 'hd');
 
@@ -7660,16 +7656,9 @@ function _aStatCard(label, val, sub){
 
 function _aDonutCard(title, roles){
   const id = 'ac-'+title.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')+'-donut';
-  const legendItems = roles.map(({role,data,color})=>`
-    <div class="analytics-legend-item">
-      <span class="analytics-legend-dot" style="background:${color}"></span>
-      <span>${esc(role)}</span>
-      <span class="analytics-legend-count">${data.length}</span>
-    </div>`).join('');
   return `<div class="analytics-donut-card">
     <h4>${esc(title)}</h4>
     <div class="analytics-donut-inner"><canvas id="${id}"></canvas></div>
-    <div class="analytics-legend">${legendItems}</div>
   </div>`;
 }
 
@@ -7711,6 +7700,7 @@ function _drawAnalyticsDonut(canvasId, values, labels, colors){
   if(analyticsCharts[canvasId]) analyticsCharts[canvasId].destroy();
   const isLight = document.documentElement.getAttribute('data-theme')==='light';
   const tooltipBg = isLight ? '#ffffff' : '#1a1a24';
+  const legendColor = isLight ? '#888' : '#9999b0';
   analyticsCharts[canvasId] = new Chart(el.getContext('2d'),{
     type:'doughnut',
     data:{
@@ -7719,9 +7709,15 @@ function _drawAnalyticsDonut(canvasId, values, labels, colors){
     },
     options:{
       responsive:true, maintainAspectRatio:false,
-      cutout:'65%',
+      cutout:'60%',
       plugins:{
-        legend:{display:false},
+        legend:{
+          display:true,
+          position:'right',
+          labels:{color:legendColor, font:{size:11, family:'Inter'}, boxWidth:10, boxHeight:10, padding:10,
+            filter:(item, data)=> data.datasets[0].data[item.index] > 0
+          }
+        },
         tooltip:{backgroundColor:tooltipBg,padding:8,callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed}`}}
       }
     }
@@ -7814,7 +7810,7 @@ function renderHeroFocusStats(){
 function heroFocusSetMetric(m){
   heroFocusState.metric = m;
   document.querySelectorAll('#hero-focus-metric-row .cex-pill').forEach(function(p){
-    p.classList.toggle('active', p.textContent.trim()===(m==='kd'?'K/D':m.charAt(0).toUpperCase()+m.slice(1)));
+    p.classList.toggle('active', p.dataset.m===m);
   });
   const hero = heroFocusState.hero;
   if(!hero) return;
