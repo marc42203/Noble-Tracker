@@ -12901,6 +12901,59 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
-<script type="module" src="/src/main.js"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js';
+
+const _fbApp = initializeApp({
+  apiKey: "AIzaSyB8J6D8UMnfGhVJBAhbnEw5z0rMCawCEA4",
+  authDomain: "noble-tracker-63aca.firebaseapp.com",
+  projectId: "noble-tracker-63aca",
+  storageBucket: "noble-tracker-63aca.firebasestorage.app",
+  messagingSenderId: "792113114525",
+  appId: "1:792113114525:web:d45ad107410312dc53d374"
+});
+const _fbAuth = getAuth(_fbApp);
+const _fbProvider = new GoogleAuthProvider();
+
+const loginScreen = document.getElementById('nt-login-screen');
+const signInBtn   = document.getElementById('nt-sign-in-btn');
+const signOutBtn  = document.getElementById('nt-sign-out-btn');
+const userAvatar  = document.getElementById('nt-user-avatar');
+const userName    = document.getElementById('nt-user-name');
+const loginError  = document.getElementById('nt-login-error');
+
+const _signInSvg = signInBtn.innerHTML;
+
+signInBtn.addEventListener('click', async () => {
+  signInBtn.disabled = true;
+  signInBtn.textContent = 'Signing in…';
+  if (loginError) loginError.textContent = '';
+  try {
+    await signInWithPopup(_fbAuth, _fbProvider);
+  } catch (err) {
+    console.error('Sign-in error:', err);
+    signInBtn.disabled = false;
+    signInBtn.innerHTML = _signInSvg;
+    if (loginError) loginError.textContent = `Sign-in failed: ${err.code ?? err.message}`;
+  }
+});
+
+signOutBtn?.addEventListener('click', () => signOut(_fbAuth));
+
+onAuthStateChanged(_fbAuth, (user) => {
+  window.__ntUser = user ?? null;
+  if (user) {
+    if (loginScreen) loginScreen.style.display = 'none';
+    if (userAvatar) { userAvatar.src = user.photoURL ?? ''; userAvatar.style.display = user.photoURL ? '' : 'none'; }
+    if (userName)   userName.textContent = user.displayName ?? user.email ?? '';
+  } else {
+    if (loginScreen) loginScreen.style.display = '';
+    signInBtn.disabled = false;
+    signInBtn.innerHTML = _signInSvg;
+  }
+});
+</script>
 </body>
 </html>
