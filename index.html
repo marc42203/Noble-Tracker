@@ -12905,7 +12905,8 @@ if ('serviceWorker' in navigator) {
 
 <script>
 (function(){
-  firebase.initializeApp({
+  try {
+  var _fbApp = firebase.apps.length ? firebase.app() : firebase.initializeApp({
     apiKey: "AIzaSyB8J6D8UMnfGhVJBAhbnEw5z0rMCawCEA4",
     authDomain: "noble-tracker-63aca.firebaseapp.com",
     projectId: "noble-tracker-63aca",
@@ -12914,7 +12915,7 @@ if ('serviceWorker' in navigator) {
     appId: "1:792113114525:web:d45ad107410312dc53d374"
   });
 
-  var _auth     = firebase.auth();
+  var _auth     = firebase.auth(_fbApp);
   var _provider = new firebase.auth.GoogleAuthProvider();
 
   var loginScreen = document.getElementById('nt-login-screen');
@@ -12950,6 +12951,11 @@ if ('serviceWorker' in navigator) {
       if(signInBtn){ signInBtn.disabled = false; signInBtn.innerHTML = _signInHtml; }
     }
   });
+  } catch(e) {
+    var errEl = document.getElementById('nt-login-error');
+    if(errEl) errEl.textContent = 'Auth init error: ' + e.message;
+    console.error('Auth init error:', e);
+  }
 })();
 </script>
 </body>
