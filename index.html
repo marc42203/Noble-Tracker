@@ -7594,6 +7594,44 @@ function renderAnalytics(){
     <div class="analytics-chart-inner"><canvas id="ac-damage-bar"></canvas></div>
   </div>`;
 
+  // ── Performance trend (rolling avg over all combat sessions by date) ───
+  const allSorted = allCombat.flatMap(({data,color,g})=>data.map(d=>Object.assign({},d,{_color:color,_g:g})))
+    .filter(d=>d.date).sort((a,b)=>a.date.localeCompare(b.date));
+  const ROLL = 10;
+  function rollingAvg(arr, fn){
+    return arr.map((_,i)=>{
+      const window = arr.slice(Math.max(0,i-ROLL+1), i+1);
+      return +(window.reduce((s,d)=>s+fn(d),0)/window.length).toFixed(1);
+    });
+  }
+  const trendLabels  = allSorted.map((_,i)=>'#'+(i+1));
+  const trendKills   = rollingAvg(allSorted, d=>d.kills||0);
+  const trendDamage  = rollingAvg(allSorted, d=>d.damage||0);
+  const trendKD      = rollingAvg(allSorted, d=>d.deaths?(d.kills/d.deaths):d.kills||0);
+
+  // ── Sessions over time (by month) ───────────────────────────────────────
+  const monthCounts = {};
+  allSorted.forEach(d=>{
+    const m = d.date.slice(0,7);
+    monthCounts[m] = (monthCounts[m]||0) + 1;
+  });
+  const monthLabels = Object.keys(monthCounts).sort();
+  const monthValues = monthLabels.map(m=>monthCounts[m]);
+
+  // ── Most played heroes ──────────────────────────────────────────────────
+  const heroCounts = {};
+  allCombat.forEach(({data,color})=>data.forEach(d=>{
+    if(!d.char) return;
+    if(!heroCounts[d.char]) heroCounts[d.char]={n:0,kills:0,color};
+    heroCounts[d.char].n++;
+    heroCounts[d.char].kills += d.kills||0;
+  }));
+  const topHeroes = Object.entries(heroCounts).sort((a,b)=>b[1].n-a[1].n).slice(0,12);
+  const heroBarLabels = topHeroes.map(([h])=>h);
+  const heroBarValues = topHeroes.map(([,v])=>v.n);
+  const heroBarColors = topHeroes.map(([,v])=>v.color+'bb');
+  const heroBarBorders= topHeroes.map(([,v])=>v.color);
+
   // ── All-role summary table ──────────────────────────────────────────────
   const tableRows = allCombat.map(({role,data,color})=>{
     const n=data.length;
@@ -7632,17 +7670,88 @@ function renderAnalytics(){
       <div class="analytics-row">${barCardHtml}${dmgBarCard}</div>
     </div>
     <div class="analytics-section">
+      <div class="analytics-section-title">Performance Trend <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);font-size:10px">${ROLL}-session rolling avg</span></div>
+      <div class="analytics-row">
+        <div class="analytics-chart-card"><h4>Kills Trend</h4><div class="analytics-chart-inner"><canvas id="ac-trend-kills"></canvas></div></div>
+        <div class="analytics-chart-card"><h4>Damage Trend</h4><div class="analytics-chart-inner"><canvas id="ac-trend-damage"></canvas></div></div>
+        <div class="analytics-chart-card"><h4>K/D Trend</h4><div class="analytics-chart-inner"><canvas id="ac-trend-kd"></canvas></div></div>
+      </div>
+    </div>
+    <div class="analytics-section">
+      <div class="analytics-section-title">Sessions Over Time</div>
+      <div class="analytics-chart-card"><div class="analytics-chart-inner"><canvas id="ac-sessions-month"></canvas></div></div>
+    </div>
+    <div class="analytics-section">
+      <div class="analytics-section-title">Most Played Heroes</div>
+      <div class="analytics-chart-card"><div style="height:${Math.max(160,topHeroes.length*28)}px"><canvas id="ac-hero-bar"></canvas></div></div>
+    </div>
+    <div class="analytics-section">
       <div class="analytics-section-title">All-Role Summary</div>
       ${tableHtml}
     </div>
   `;
 
-  // Draw bar/donut summary charts
+  // Draw all charts
   setTimeout(()=>{
+    const isLight = document.documentElement.getAttribute('data-theme')==='light';
+    const gridC = isLight?'rgba(0,0,0,.07)':'rgba(255,255,255,.05)';
+    const tickC = isLight?'#888':'#5a5a70';
+    const tipBg = isLight?'#ffffff':'#1a1a24';
+
     _drawAnalyticsBar('ac-kills-bar', barLabels, barValues, barColors, barBg, 'Avg Kills');
     _drawAnalyticsBar('ac-damage-bar', barLabels, dmgBarValues, barColors, barBg, 'Avg Damage');
     _drawAnalyticsDonut('ac-overwatch-donut', owAll.map(r=>r.data.length), owAll.map(r=>r.role), owAll.map(r=>r.color));
     _drawAnalyticsDonut('ac-marvel-rivals-donut', rvAll.map(r=>r.data.length), rvAll.map(r=>r.role), rvAll.map(r=>r.color));
+
+    // Trend line charts
+    function drawTrend(id, labels, values, color, label){
+      const el = document.getElementById(id); if(!el) return;
+      if(analyticsCharts[id]) analyticsCharts[id].destroy();
+      analyticsCharts[id] = new Chart(el.getContext('2d'),{
+        type:'line',
+        data:{labels, datasets:[{label, data:values, borderColor:color, backgroundColor:color+'22',
+          borderWidth:2, pointRadius:0, fill:true, tension:.4}]},
+        options:{responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{display:false}, tooltip:{backgroundColor:tipBg, padding:8,
+            callbacks:{title:ctx=>'Session '+ctx[0].label, label:ctx=>label+': '+ctx.parsed.y}}},
+          scales:{x:{display:false}, y:{grid:{color:gridC}, ticks:{color:tickC,font:{size:10}}, beginAtZero:true}}}
+      });
+    }
+    if(allSorted.length){
+      drawTrend('ac-trend-kills',  trendLabels, trendKills,  '#f97316', 'Avg Kills');
+      drawTrend('ac-trend-damage', trendLabels, trendDamage, '#a78bfa', 'Avg Damage');
+      drawTrend('ac-trend-kd',     trendLabels, trendKD,     '#34d399', 'K/D');
+    }
+
+    // Sessions by month
+    const monthEl = document.getElementById('ac-sessions-month');
+    if(monthEl && monthLabels.length){
+      if(analyticsCharts['ac-sessions-month']) analyticsCharts['ac-sessions-month'].destroy();
+      analyticsCharts['ac-sessions-month'] = new Chart(monthEl.getContext('2d'),{
+        type:'bar',
+        data:{labels:monthLabels, datasets:[{label:'Sessions', data:monthValues,
+          backgroundColor:'#6366f1bb', borderColor:'#6366f1', borderWidth:1, borderRadius:4}]},
+        options:{responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{display:false}, tooltip:{backgroundColor:tipBg, padding:8}},
+          scales:{x:{grid:{color:gridC}, ticks:{color:tickC,font:{size:10}}},
+                  y:{grid:{color:gridC}, ticks:{color:tickC,font:{size:10}}, beginAtZero:true}}}
+      });
+    }
+
+    // Most played heroes (horizontal bar)
+    const heroEl = document.getElementById('ac-hero-bar');
+    if(heroEl && heroBarLabels.length){
+      if(analyticsCharts['ac-hero-bar']) analyticsCharts['ac-hero-bar'].destroy();
+      analyticsCharts['ac-hero-bar'] = new Chart(heroEl.getContext('2d'),{
+        type:'bar',
+        data:{labels:heroBarLabels, datasets:[{label:'Sessions', data:heroBarValues,
+          backgroundColor:heroBarColors, borderColor:heroBarBorders, borderWidth:1, borderRadius:4}]},
+        options:{indexAxis:'y', responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{display:false}, tooltip:{backgroundColor:tipBg, padding:8}},
+          scales:{x:{grid:{color:gridC}, ticks:{color:tickC,font:{size:10}}, beginAtZero:true},
+                  y:{grid:{display:false}, ticks:{color:tickC,font:{size:11}}}}}
+      });
+    }
   }, 0);
 }
 
