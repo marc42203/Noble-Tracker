@@ -27,7 +27,6 @@ jobs:
           mkdir _site
           cp index.html _site/
           cp -r public/* _site/
-          cp -r src _site/src
 
       - uses: actions/configure-pages@v4
 
