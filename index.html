@@ -7805,7 +7805,7 @@ function renderHeroFocusStats(){
   if(!metricDefs.find(function(m){return m.k===heroFocusState.metric;})) heroFocusState.metric='kills';
   const metricRow = document.getElementById('hero-focus-metric-row');
   if(metricRow) metricRow.innerHTML = metricDefs.map(function(m){
-    return '<button class="cex-pill'+(heroFocusState.metric===m.k?' active':'')+'" onclick="heroFocusSetMetric(''+m.k+'')">'+m.l+'</button>';
+    return '<button class="cex-pill'+(heroFocusState.metric===m.k?' active':'')+'" onclick="heroFocusSetMetric(this.dataset.m)" data-m="'+m.k+'">'+m.l+'</button>';
   }).join('');
   if(wrapEl) wrapEl.style.display='';
   setTimeout(function(){ renderHeroFocusChart(allSessions); }, 0);
