@@ -2487,7 +2487,7 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--accent-clr,var(--bo
   <img id="sp_Black_Widow"  src="/sprites/sp_Black_Widow.png">
   <img id="sp_Blade"  src="/sprites/sp_Blade.png">
   <img id="sp_Captain_America"  src="/sprites/sp_Captain_America.png">
-  <img id="sp_Cloak___Dagger"  src="/sprites/sp_Cloak___Dagger.png">
+  <img id="sp_Cloak__Dagger"  src="/sprites/sp_Cloak__Dagger.png">
   <img id="sp_Daredevil"  src="/sprites/sp_Daredevil.png">
   <img id="sp_Deadpool"  src="/sprites/sp_Deadpool.png">
   <img id="sp_Doctor_Strange"  src="/sprites/sp_Doctor_Strange.png">
@@ -2519,7 +2519,7 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--accent-clr,var(--bo
   <img id="sp_Rocket"  src="/sprites/sp_Rocket.png">
   <img id="sp_Rogue"  src="/sprites/sp_Rogue.png">
   <img id="sp_Scarlet_Witch"  src="/sprites/sp_Scarlet_Witch.png">
-  <img id="sp_Spider_Nab"  src="/sprites/sp_Spider_Nab.png">
+  <img id="sp_Spider_Man"  src="/sprites/sp_Spider_Man.png">
   <img id="sp_Squirrel_Girl"  src="/sprites/sp_Squirrel_Girl.png">
   <img id="sp_Star_Lord"  src="/sprites/sp_Star_Lord.png">
   <img id="sp_Storm"  src="/sprites/sp_Storm.png">
@@ -2535,7 +2535,7 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--accent-clr,var(--bo
   <img id="exc_Black_Widow"  src="/sprites/exc_Black_Widow.png">
   <img id="exc_Blade"  src="/sprites/exc_Blade.png">
   <img id="exc_Captain_America"  src="/sprites/exc_Captain_America.png">
-  <img id="exc_Cloak___Dagger"  src="/sprites/exc_Cloak___Dagger.png">
+  <img id="exc_Cloak__Dagger"  src="/sprites/exc_Cloak__Dagger.png">
   <img id="exc_Daredevil"  src="/sprites/exc_Daredevil.png">
   <img id="exc_Deadpool"  src="/sprites/exc_Deadpool.png">
   <img id="exc_Doctor_Strange"  src="/sprites/exc_Doctor_Strange.png">
@@ -5038,16 +5038,16 @@ function psItemImg(name) {
 function getHeroSrc(name){
   // Normalise: trim + fix common name variations
   var ALIASES = {
-    'Spider-Man':   'Spider_Nab',
+    'Spider-Man':   'Spider_Man',
     'Mr. Fantastic':'Mr_Fantastic',
     'Mr Fantastic': 'Mr_Fantastic',
-    'Spider-Man (Peter Parker)': 'Spider_Nab',
+    'Spider-Man (Peter Parker)': 'Spider_Man',
     'Soldier 76':   'Soldier__76',
     'Soldier: 76':  'Soldier__76',
     'Torbjorn':     'Torbj_rn',
     'Torbjörn':     'Torbj_rn',
-    'Cloak & Dagger':'Cloak___Dagger',
-    'Cloak and Dagger':'Cloak___Dagger',
+    'Cloak & Dagger':'Cloak__Dagger',
+    'Cloak and Dagger':'Cloak__Dagger',
   };
   var key = (name||'').trim();
   var suffix = ALIASES[key] || key.replace(/[^a-zA-Z0-9]/g,'_');
@@ -5088,7 +5088,7 @@ var OW_CHARS = {
 };
 var RV_CHARS = {
   Vanguard:   ['Captain America','Doctor Strange','Groot','Hulk','Magneto','Peni Parker','Rogue','Thor','Venom'],
-  Duelist:    ['Black Panther','Black Widow','Hawkeye','Human Torch','Iron Fist','Iron Man','Magik','Mr Fantastic','Moon Knight','Namor','Phoenix','Psylocke','Scarlet Witch','Spider-Man','Squirrel Girl','Star-Lord','Storm','Punisher','Thing','Winter Soldier','Wolverine'],
+  Duelist:    ['Black Panther','Black Widow','Hawkeye','Hela','Human Torch','Iron Fist','Iron Man','Magik','Mr Fantastic','Moon Knight','Namor','Phoenix','Psylocke','Scarlet Witch','Spider-Man','Squirrel Girl','Star-Lord','Storm','Punisher','Thing','Winter Soldier','Wolverine'],
   Strategist: ['Adam Warlock','Cloak & Dagger','Invisible Woman','Jeff','Loki','Luna Snow','Mantis','Rocket','Ultron']
 };
 var HD_FACTIONS = ['Automaton','Terminid','Illuminate'];
@@ -7545,10 +7545,10 @@ function renderAnalytics(){
     heroes.sort(function(a,b){return a.localeCompare(b);});
     if(!heroes.length) return '';
     var items = heroes.map(function(h){
-      var sp = h.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+      var heroSrc = getHeroSrc(h) || '';
       var safeH = h.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
       return '<div class="hero-focus-dd-item" onclick="selectHeroFocus(\''+safeH+'\',\''+g+'\')">' +
-        '<img class="hero-focus-dd-img" src="/sprites/sp_'+sp+'.png" onerror="this.style.display=\'none\'" loading="lazy">' +
+        '<img class="hero-focus-dd-img" src="'+heroSrc+'" onerror="this.style.display=\'none\'" loading="lazy">' +
         '<span>'+esc(h)+'</span></div>';
     }).join('');
     return '<div class="analytics-section">' +
@@ -7858,9 +7858,9 @@ function selectHeroFocus(heroName, g){
   heroFocusState[g].hero = heroName;
   var input = document.getElementById('hf-input-'+g);
   if(input) input.value = heroName;
-  var sp = heroName.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+  var heroSrc = getHeroSrc(heroName) || '/sprites/sp_pokeball_icon.png';
   var portrait = document.getElementById('hf-portrait-'+g);
-  if(portrait) portrait.innerHTML = '<img src="/sprites/sp_'+sp+'.png" onerror="this.src=\'/sprites/sp_pokeball_icon.png\'" style="width:100%;height:100%;object-fit:cover">';
+  if(portrait) portrait.innerHTML = '<img src="'+heroSrc+'" onerror="this.src=\'/sprites/sp_pokeball_icon.png\'" style="width:100%;height:100%;object-fit:cover">';
   renderHeroFocusStats(g);
 }
 
