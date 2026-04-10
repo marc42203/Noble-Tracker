@@ -27,6 +27,7 @@ jobs:
           mkdir _site
           cp index.html _site/
           cp -r public/* _site/
+          sed -i "s|/sprites/|sprites/|g" _site/index.html
 
       - uses: actions/configure-pages@v4
 
