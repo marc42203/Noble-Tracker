@@ -536,6 +536,10 @@ tbody tr.exceptional:hover{background:linear-gradient(90deg,rgba(251,191,36,.1) 
 /* HD card accent */
 .hd-card{--card-accent:#22c55e}
 .hd-card .home-game-info h3{color:#22c55e}
+/* Analytics card accent */
+.analytics-card{--card-accent:#6366f1}
+.analytics-card-title{color:#6366f1}
+.analytics-card:hover{border-color:#6366f1;box-shadow:0 8px 32px rgba(0,0,0,.5),0 0 24px rgba(99,102,241,.2)}
 
 /* Home tab */
 .tab.home{font-size:13px}
@@ -2799,6 +2803,17 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--accent-clr,var(--bo
         <div class="home-game-arrow">→</div>
       </div>
       <div class="home-game-roles" id="hgroles-racing"></div>
+    </div>
+    <div class="home-game-card analytics-card" onclick="switchGame('analytics')">
+      <div class="home-game-card-bg" style="background:linear-gradient(135deg,rgba(99,102,241,.18),rgba(168,85,247,.08),transparent)"></div>
+      <div class="home-game-card-inner">
+        <div style="font-size:36px;width:48px;text-align:center;flex-shrink:0">📊</div>
+        <div class="home-game-info">
+          <h3 class="analytics-card-title">Analytics</h3>
+          <div class="home-game-meta" id="hgmeta-analytics">Loading…</div>
+        </div>
+        <div class="home-game-arrow">→</div>
+      </div>
     </div>
   </div>
 </div>
@@ -6838,6 +6853,23 @@ function renderHome(){
   renderHomeGameCard('ow', owAll, OW_ROLES, 'ow');
   renderHomeGameCard('rv', rvAll, RV_ROLES, 'rv');
   renderHomeHDCard(hdAll);
+
+  // Analytics card meta
+  const analyticsMeta = document.getElementById('hgmeta-analytics');
+  if(analyticsMeta){
+    const totalSessions = owAll.length + rvAll.length + hdAll.length;
+    const totalKillsAll = [...owAll,...rvAll,...hdAll].reduce((s,d)=>s+(+d.kills||0),0);
+    const racingRuns = RACING_GAMES.flatMap(g=>db.racing[g].runs||[]).length;
+    if(totalSessions || racingRuns){
+      const parts = [];
+      if(totalSessions) parts.push(`<span style="color:var(--text)">${totalSessions.toLocaleString()}</span> sessions`);
+      if(totalKillsAll) parts.push(`<span style="color:var(--text)">${totalKillsAll.toLocaleString()}</span> total kills`);
+      if(racingRuns) parts.push(`<span style="color:var(--text)">${racingRuns}</span> race runs`);
+      analyticsMeta.innerHTML = parts.join(' &nbsp;·&nbsp; ');
+    } else {
+      analyticsMeta.textContent = 'Cross-game performance trends & charts';
+    }
+  }
 
   // MC pill: current seed + structure count
   const mcSeedEl    = document.getElementById('hs-mc-seed');
