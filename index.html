@@ -7889,10 +7889,26 @@ function renderAnalytics(){
       <td>${fmt1(avg(data.map(d=>d.deaths?d.kills/d.deaths:d.kills||0)))}</td>
     </tr>`;
   });
+  const hdTableRows = hdAll.map(({role,data,color})=>{
+    const n=data.length;
+    if(!n) return `<tr><td><span class="analytics-role-dot" style="background:${color}"></span>${esc(role)}</td><td colspan="5" style="color:var(--text3)">No data</td></tr>`;
+    return `<tr>
+      <td><span class="analytics-role-dot" style="background:${color}"></span>${esc(role)}</td>
+      <td>${n}</td>
+      <td>${fmt1(avg(data.map(d=>d.kills||0)))}</td>
+      <td style="color:var(--text3)">—</td>
+      <td>${fmt1(avg(data.map(d=>d.deaths||0)))}</td>
+      <td>${fmt1(avg(data.map(d=>d.deaths?d.kills/d.deaths:d.kills||0)))}</td>
+    </tr>`;
+  });
   const tableHtml = `<div class="analytics-table-wrap">
     <table class="analytics-table">
       <thead><tr><th>Role</th><th>Sessions</th><th>Avg K</th><th>Avg DMG</th><th>Avg Deaths</th><th>Avg K/D</th></tr></thead>
-      <tbody>${tableRows.join('')}</tbody>
+      <tbody>
+        ${tableRows.join('')}
+        <tr><td colspan="6" style="background:var(--surface2);color:var(--text3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;padding:6px 10px">Helldivers 2 — Factions</td></tr>
+        ${hdTableRows.join('')}
+      </tbody>
     </table>
   </div>`;
 
