@@ -679,6 +679,24 @@ tbody td{padding:11px 14px;font-size:14px;white-space:nowrap}
 .btn-icon.repeat{color:var(--racing);font-size:15px}
 .btn-icon.repeat:hover{background:rgba(245,158,11,.12)}
 
+/* ── RACING TRACK MANAGEMENT ── */
+.track-sel-row{display:flex;align-items:center;gap:6px}
+.track-sel-row select{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s}
+.track-sel-row select:focus{border-color:var(--racing);box-shadow:0 0 0 3px var(--racing-soft)}
+.btn-new-track{background:var(--racing);color:#000;border:none;border-radius:var(--rs);padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+.btn-new-track:hover{opacity:.85}
+.track-section-hdr{display:flex;align-items:center;gap:10px;padding:8px 0 4px;border-bottom:1px solid var(--border);margin-bottom:6px;cursor:pointer;user-select:none}
+.track-section-hdr h4{margin:0;font-size:13px;font-weight:700;color:var(--racing);flex:1}
+.track-section-meta{font-size:11px;color:var(--text3)}
+.btn-manage-tracks{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);padding:5px 10px;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-manage-tracks:hover{border-color:var(--racing);color:var(--racing)}
+.track-list-wrap{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.track-list-item{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;font-size:13px}
+.track-list-item>div:first-child{flex:1;font-weight:600;color:var(--text)}
+.track-stat-pills{display:flex;gap:8px;flex-wrap:wrap;padding:4px 0 8px}
+.track-stat-pill{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--text2)}
+.track-stat-pill strong{color:var(--racing)}
+
 /* ── TOAST ── */
 #toast{position:fixed;bottom:22px;right:22px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:9px 15px;font-size:13px;font-weight:500;transform:translateY(80px);opacity:0;transition:all .25s;z-index:999;display:flex;align-items:center;gap:8px}
 #toast.show{transform:translateY(0);opacity:1}
@@ -3225,25 +3243,19 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--accent-clr,var(--bo
   <div class="modal racing-f" id="m-racing" style="display:none">
     <div class="modal-hdr"><h3 id="mt-racing">Log Race</h3><button class="btn-x" onclick="closeModal('racing')">×</button></div>
     <div class="modal-body"><div class="fg">
-      <div class="field full"><label>Game</label><input id="racing-game-display" disabled style="color:var(--text2);cursor:default"></div>
-      <div class="field full"><label>Race / Track</label><input type="text" id="racing-race" placeholder="e.g. Horizon Festival Sprint"></div>
-      <div class="field"><label>Car Used</label><input type="text" id="racing-car" placeholder="e.g. Bugatti Chiron"></div>
-      <div class="field"><label>Car Type / Class</label><input type="text" id="racing-cartype" placeholder="e.g. S1 900, Hypercar"></div>
-      <div class="field"><label>Finish Position <span style="color:var(--text3);font-weight:400">(opt.)</span></label><input type="number" id="racing-position" min="1" max="99" placeholder="e.g. 1"></div>
-      <div class="field">
-        <label>Distance</label>
-        <div style="display:flex;gap:6px">
-          <input type="number" id="racing-distance" min="0" step="0.1" placeholder="0.0" style="flex:1">
-          <select id="racing-distunit" style="width:60px"><option value="km">km</option><option value="mi">mi</option></select>
+      <div class="field full">
+        <label>Track</label>
+        <div class="track-sel-row">
+          <select id="racing-track-sel"><option value="">— select a track —</option></select>
+          <button type="button" class="btn-new-track" onclick="openTrackModal()">+ New Track</button>
         </div>
       </div>
-      <div class="field"><label>Time (mm:ss)</label><input type="text" id="racing-time" placeholder="3:45"></div>
+      <div class="field"><label>Car Used</label><input type="text" id="racing-car" placeholder="e.g. Bugatti Chiron"></div>
+      <div class="field"><label>Car Class</label><input type="text" id="racing-cartype" placeholder="e.g. S1 900, Hypercar"></div>
+      <div class="field"><label>Lap Time <span style="color:var(--text3);font-weight:400">(opt., mm:ss)</span></label><input type="text" id="racing-laptime" placeholder="1:23"></div>
+      <div class="field"><label>Total Time <span style="color:var(--text3);font-weight:400">(mm:ss)</span></label><input type="text" id="racing-time" placeholder="3:45"></div>
+      <div class="field"><label>Finish Position <span style="color:var(--text3);font-weight:400">(opt.)</span></label><input type="number" id="racing-position" min="1" max="99" placeholder="e.g. 1"></div>
       <div class="field"><label>Credits Earned</label><input type="number" id="racing-credits" min="0" placeholder="0"></div>
-      <div class="field full">
-        <div class="lap-count-label" id="racing-lap-count-label">Lap Times</div>
-        <div class="lap-times-list" id="racing-lap-list"></div>
-        <button type="button" class="btn-add-lap" onclick="addLapInput('racing')">+ Add Lap</button>
-      </div>
       <div class="field full"><label>Notes (Optional)</label><textarea id="racing-notes" placeholder="Any notes…"></textarea></div>
       <div class="field full" style="margin-top:4px"><button class="btn-sub racing" onclick="saveRacing()">Log Race</button></div>
     </div></div>
@@ -3253,16 +3265,31 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--accent-clr,var(--bo
     <div class="modal-hdr"><h3 id="mt-racing-quick">Repeat Race</h3><button class="btn-x" onclick="closeModal('racing-quick')">×</button></div>
     <div class="modal-body"><div class="fg">
       <div class="field full"><div class="quick-repeat-info" id="racing-quick-info"></div></div>
+      <div class="field"><label>Lap Time <span style="color:var(--text3);font-weight:400">(opt., mm:ss)</span></label><input type="text" id="rq-laptime" placeholder="1:23"></div>
+      <div class="field"><label>Total Time <span style="color:var(--text3);font-weight:400">(mm:ss)</span></label><input type="text" id="rq-time" placeholder="3:45"></div>
       <div class="field"><label>Finish Position <span style="color:var(--text3);font-weight:400">(opt.)</span></label><input type="number" id="rq-position" min="1" max="99" placeholder="e.g. 1"></div>
-      <div class="field"><label>Time (mm:ss)</label><input type="text" id="rq-time" placeholder="3:45"></div>
       <div class="field"><label>Credits Earned</label><input type="number" id="rq-credits" min="0" placeholder="0"></div>
-      <div class="field full">
-        <div class="lap-count-label" id="rq-lap-count-label">Lap Times</div>
-        <div class="lap-times-list" id="rq-lap-list"></div>
-        <button type="button" class="btn-add-lap" onclick="addLapInput('rq')">+ Add Lap</button>
-      </div>
       <div class="field full"><label>Notes (Optional)</label><textarea id="rq-notes" placeholder="Any notes…"></textarea></div>
       <div class="field full" style="margin-top:4px"><button class="btn-sub racing" onclick="saveRacingQuick()">Log Race</button></div>
+    </div></div>
+  </div>
+  <!-- TRACK MANAGEMENT -->
+  <div class="modal racing-f" id="m-track" style="display:none">
+    <div class="modal-hdr"><h3>Manage Tracks</h3><button class="btn-x" onclick="backToRacingModal()">←</button></div>
+    <div class="modal-body"><div class="fg">
+      <div class="field full"><label>Track Name</label><input type="text" id="track-name" placeholder="e.g. Horizon Festival Sprint"></div>
+      <div class="field">
+        <label>Length <span style="color:var(--text3);font-weight:400">(opt.)</span></label>
+        <div style="display:flex;gap:6px">
+          <input type="number" id="track-length" min="0" step="0.1" placeholder="0.0" style="flex:1">
+          <select id="track-lengthunit" style="width:60px"><option value="km">km</option><option value="mi">mi</option></select>
+        </div>
+      </div>
+      <div class="field full" style="margin-top:4px"><button class="btn-sub racing" onclick="saveTrack()">Add Track</button></div>
+      <div class="field full">
+        <div class="track-section-hdr">Saved Tracks</div>
+        <div class="track-list-wrap" id="track-list"></div>
+      </div>
     </div></div>
   </div>
 </div>
@@ -5296,14 +5323,24 @@ function load(){
     RV_ROLES.forEach(r=>{if(!raw.rv[r])raw.rv[r]=[]});
     HD_FACTIONS.forEach(f=>{if(!raw.hd[f])raw.hd[f]=[]});
     if(!raw.racing) raw.racing={};
-    RACING_GAMES.forEach(g=>{if(!raw.racing[g])raw.racing[g]=[]});
+    RACING_GAMES.forEach(g=>{
+      if(!raw.racing[g]){raw.racing[g]={tracks:[],runs:[]};}
+      else if(Array.isArray(raw.racing[g])){
+        const old=raw.racing[g];const tracks=[];let tid=1;const tmap={};
+        old.forEach(r=>{const k=(r.race||'').trim().toLowerCase();if(k&&!tmap[k]){tmap[k]=tid;tracks.push({id:tid++,name:r.race||'',length:r.distance||0,lengthUnit:r.distUnit||'km'});}});
+        raw.racing[g]={tracks,runs:old.map(r=>{const k=(r.race||'').trim().toLowerCase();return{id:r.id,date:r.date,trackId:tmap[k]||null,car:r.car,carType:r.carType,lapTimeSecs:r.bestLap||0,timeStr:r.timeStr,timeSecs:r.timeSecs,position:r.position,credits:r.credits,crPerHr:r.crPerHr,racesPerHr:r.racesPerHr,notes:r.notes};})};
+      } else {
+        if(!raw.racing[g].tracks)raw.racing[g].tracks=[];
+        if(!raw.racing[g].runs)raw.racing[g].runs=[];
+      }
+    });
     return raw;
   }catch{
     const d={ow:{},rv:{},hd:{},racing:{}};
     OW_ROLES.forEach(r=>d.ow[r]=[]);
     RV_ROLES.forEach(r=>d.rv[r]=[]);
     HD_FACTIONS.forEach(f=>d.hd[f]=[]);
-    RACING_GAMES.forEach(g=>d.racing[g]=[]);
+    RACING_GAMES.forEach(g=>d.racing[g]={tracks:[],runs:[]});
     return d;
   }
 }
@@ -5316,21 +5353,26 @@ var nid = {ow:1,rv:1,hd:1,racing:1};
   const all = getAllEntries(g);
   if(all.length) nid[g] = Math.max(...all.map(d=>d.id))+1;
 });
+var nidTrack = {};
 (function(){
-  const all = RACING_GAMES.flatMap(g=>db.racing[g]);
-  if(all.length) nid.racing = Math.max(...all.map(d=>d.id))+1;
+  const allRuns = RACING_GAMES.flatMap(g=>db.racing[g].runs);
+  if(allRuns.length) nid.racing = Math.max(...allRuns.map(d=>d.id))+1;
+  RACING_GAMES.forEach(g=>{
+    const tracks=db.racing[g].tracks;
+    nidTrack[g]=tracks.length?Math.max(...tracks.map(t=>t.id))+1:1;
+  });
 })();
 
 function getAllEntries(g){
   if(g==='ow') return OW_ROLES.flatMap(r=>db.ow[r]);
   if(g==='rv') return RV_ROLES.flatMap(r=>db.rv[r]);
-  if(g==='racing') return RACING_GAMES.flatMap(r=>db.racing[r]);
+  if(g==='racing') return RACING_GAMES.flatMap(r=>db.racing[r].runs);
   return HD_FACTIONS.flatMap(f=>db.hd[f]);
 }
 function getRole(g, id){
   if(g==='ow') return OW_ROLES.find(r=>db.ow[r].some(d=>d.id===id));
   if(g==='rv') return RV_ROLES.find(r=>db.rv[r].some(d=>d.id===id));
-  if(g==='racing') return RACING_GAMES.find(r=>db.racing[r].some(d=>d.id===id));
+  if(g==='racing') return RACING_GAMES.find(r=>db.racing[r].runs.some(d=>d.id===id));
   return HD_FACTIONS.find(f=>db.hd[f].some(d=>d.id===id));
 }
 
@@ -5573,127 +5615,184 @@ function fmtLap(secs){
 }
 
 // ── RACING ───────────────────────────────────────────────────────────────
-function openRacingModal(game, entry=null){
+function _parseTimeStr(s){
+  if(!s)return 0;
+  const p=s.split(':');
+  if(p.length===3){const h=parseInt(p[0],10),m=parseInt(p[1],10),sec=parseFloat(p[2]);return(!isNaN(h)&&!isNaN(m)&&!isNaN(sec))?h*3600+m*60+sec:0;}
+  if(p.length===2){const m=parseInt(p[0],10),sec=parseFloat(p[1]);return(!isNaN(m)&&!isNaN(sec))?m*60+sec:0;}
+  return 0;
+}
+
+function populateTrackSel(game, selId, selectedId){
+  const sel = document.getElementById(selId);
+  if(!sel) return;
+  const tracks = (db.racing[game]&&db.racing[game].tracks)||[];
+  sel.innerHTML = '<option value="">— select a track —</option>' +
+    tracks.map(t=>`<option value="${t.id}"${t.id===selectedId?' selected':''}>${esc(t.name)}${t.length?' ('+t.length+' '+t.lengthUnit+')':''}</option>`).join('');
+}
+
+function openRacingModal(game, run=null){
   closeAllSD();
   document.querySelectorAll('.modal').forEach(m=>m.style.display='none');
   document.getElementById('mbg').classList.add('open');
   document.getElementById('m-racing').style.display='block';
   document.getElementById('m-racing').dataset.role = game;
-  document.getElementById('mt-racing').textContent = (entry?'Edit':'Log')+' Race — '+game;
-  document.getElementById('racing-game-display').value = game;
+  document.getElementById('mt-racing').textContent = (run?'Edit':'Log')+' Race — '+game;
   editId.racing = null;
-  clearLapList('racing');
-  if(entry){
-    editId.racing = entry.id;
-    document.getElementById('racing-race').value = entry.race||'';
-    document.getElementById('racing-car').value = entry.car||'';
-    document.getElementById('racing-cartype').value = entry.carType||'';
-    document.getElementById('racing-position').value = entry.position!=null?entry.position:'';
-    document.getElementById('racing-distance').value = entry.distance||'';
-    document.getElementById('racing-distunit').value = entry.distUnit||'km';
-    document.getElementById('racing-time').value = entry.timeStr||'';
-    document.getElementById('racing-credits').value = entry.credits||'';
-    document.getElementById('racing-notes').value = entry.notes||'';
-    if(entry.lapTimes&&entry.lapTimes.length) entry.lapTimes.forEach(s=>addLapInput('racing',fmtLap(s)));
-  } else {
-    ['racing-race','racing-car','racing-cartype','racing-distance','racing-time','racing-credits','racing-notes'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('racing-position').value='';
-    document.getElementById('racing-distunit').value='km';
+  populateTrackSel(game, 'racing-track-sel', run?run.trackId:null);
+  ['racing-car','racing-cartype','racing-laptime','racing-time','racing-credits','racing-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('racing-position').value='';
+  if(run){
+    editId.racing = run.id;
+    document.getElementById('racing-track-sel').value = run.trackId||'';
+    document.getElementById('racing-car').value = run.car||'';
+    document.getElementById('racing-cartype').value = run.carType||'';
+    document.getElementById('racing-laptime').value = run.lapTimeSecs?fmtLap(run.lapTimeSecs):'';
+    document.getElementById('racing-time').value = run.timeStr||'';
+    document.getElementById('racing-position').value = run.position!=null?run.position:'';
+    document.getElementById('racing-credits').value = run.credits||'';
+    document.getElementById('racing-notes').value = run.notes||'';
   }
 }
 
 var _rqTemplate = null;
-function openRacingQuick(game, entry){
-  _rqTemplate = {game, entry};
+function openRacingQuick(game, run){
+  _rqTemplate = {game, run};
   closeAllSD();
   document.querySelectorAll('.modal').forEach(m=>m.style.display='none');
   document.getElementById('mbg').classList.add('open');
   document.getElementById('m-racing-quick').style.display='block';
   document.getElementById('mt-racing-quick').textContent = 'Repeat Race — '+game;
-  clearLapList('rq');
+  ['rq-laptime','rq-time','rq-credits','rq-notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('rq-position').value='';
-  document.getElementById('rq-time').value='';
-  document.getElementById('rq-credits').value='';
-  document.getElementById('rq-notes').value='';
-  const pos = entry.position!=null ? '<br><span style="color:var(--racing)">Last: P'+entry.position+'</span>' : '';
+  const track = (db.racing[game].tracks||[]).find(t=>t.id===run.trackId);
+  const trackName = track?track.name:'Unknown Track';
+  const trackInfo = track&&track.length?` · ${track.length} ${track.lengthUnit}`:'';
+  const pos = run.position!=null?'<br><span style="color:var(--racing)">Last: P'+run.position+'</span>':'';
   document.getElementById('racing-quick-info').innerHTML =
-    `<strong>${esc(entry.race)}</strong> · ${esc(entry.car)||'—'}<br>`+
-    `<span style="color:var(--text3)">${esc(entry.carType)||''}</span>`+
-    (entry.distance?` · ${entry.distance} ${entry.distUnit}`:'') + pos;
+    `<strong>${esc(trackName)}</strong>${trackInfo}<br>`+
+    `${esc(run.car)||'—'}<span style="color:var(--text3)">${run.carType?' · '+esc(run.carType):''}</span>`+pos;
 }
 
 function saveRacingQuick(){
   if(!_rqTemplate) return;
-  const {game, entry} = _rqTemplate;
+  const {game, run} = _rqTemplate;
   const timeStr = document.getElementById('rq-time').value.trim();
-  let timeSecs=0;
-  if(timeStr){const p=timeStr.split(':');if(p.length===2){const mm=parseInt(p[0],10),ss=parseInt(p[1],10);if(!isNaN(mm)&&!isNaN(ss))timeSecs=mm*60+ss;}}
+  const timeSecs = _parseTimeStr(timeStr);
+  const lapTimeStr = document.getElementById('rq-laptime').value.trim();
+  const lapTimeSecs = _parseTimeStr(lapTimeStr);
   const credits = +document.getElementById('rq-credits').value||0;
   const crPerHr = timeSecs>0?Math.round(credits/(timeSecs/3600)):0;
   const racesPerHr = timeSecs>0?Math.round((3600/timeSecs)*10)/10:0;
   const posVal = document.getElementById('rq-position').value;
   const position = posVal!==''?parseInt(posVal,10)||null:null;
-  const lapTimes = getLapTimesSeconds('rq');
-  const bestLap = lapTimes.length?Math.min(...lapTimes):null;
-  const avgLap  = lapTimes.length?lapTimes.reduce((a,b)=>a+b,0)/lapTimes.length:null;
   const e={
     id:nid.racing++, date:new Date().toISOString(),
-    race:entry.race, car:entry.car, carType:entry.carType,
-    distance:entry.distance, distUnit:entry.distUnit,
-    position, lapTimes, bestLap, avgLap,
-    timeStr, timeSecs, credits, crPerHr, racesPerHr,
+    trackId:run.trackId, car:run.car, carType:run.carType,
+    lapTimeSecs, timeStr, timeSecs, position, credits, crPerHr, racesPerHr,
     notes:document.getElementById('rq-notes').value.trim(),
   };
-  db.racing[game].push(e);
+  db.racing[game].runs.push(e);
   persist(); closeModal('racing-quick'); renderGame('racing'); toast('Race logged ✓');
 }
 
 function saveRacing(){
   const game = document.getElementById('m-racing').dataset.role;
-  const race = document.getElementById('racing-race').value.trim();
-  if(!race){toast('Please enter a race / track name');return}
+  const trackId = +document.getElementById('racing-track-sel').value||null;
+  if(!trackId){toast('Please select a track (or create one first)');return;}
   const timeStr = document.getElementById('racing-time').value.trim();
-  let timeSecs=0;
-  if(timeStr){const parts=timeStr.split(':');if(parts.length===2){const mm=parseInt(parts[0],10),ss=parseInt(parts[1],10);if(!isNaN(mm)&&!isNaN(ss))timeSecs=mm*60+ss;}}
+  const timeSecs = _parseTimeStr(timeStr);
+  const lapTimeStr = document.getElementById('racing-laptime').value.trim();
+  const lapTimeSecs = _parseTimeStr(lapTimeStr);
   const credits = +document.getElementById('racing-credits').value||0;
   const crPerHr = timeSecs>0?Math.round(credits/(timeSecs/3600)):0;
   const racesPerHr = timeSecs>0?Math.round((3600/timeSecs)*10)/10:0;
   const posVal = document.getElementById('racing-position').value;
   const position = posVal!==''?parseInt(posVal,10)||null:null;
-  const lapTimes = getLapTimesSeconds('racing');
-  const bestLap = lapTimes.length?Math.min(...lapTimes):null;
-  const avgLap  = lapTimes.length?lapTimes.reduce((a,b)=>a+b,0)/lapTimes.length:null;
-  const oldDate = editId.racing?db.racing[game].find(d=>d.id===editId.racing)?.date:null;
+  const oldDate = editId.racing!=null?db.racing[game].runs.find(d=>d.id===editId.racing)?.date:null;
   const e={
-    id:editId.racing??nid.racing++,
+    id:editId.racing!=null?editId.racing:nid.racing++,
     date:oldDate||new Date().toISOString(),
-    race, car:document.getElementById('racing-car').value.trim(),
+    trackId, car:document.getElementById('racing-car').value.trim(),
     carType:document.getElementById('racing-cartype').value.trim(),
-    position, lapTimes, bestLap, avgLap,
-    distance:+document.getElementById('racing-distance').value||0,
-    distUnit:document.getElementById('racing-distunit').value,
-    timeStr, timeSecs, credits, crPerHr, racesPerHr,
+    lapTimeSecs, timeStr, timeSecs, position, credits, crPerHr, racesPerHr,
     notes:document.getElementById('racing-notes').value.trim(),
   };
-  if(editId.racing!==null){db.racing[game]=db.racing[game].map(d=>d.id===editId.racing?e:d);toast('Race updated ✓')}
-  else{db.racing[game].push(e);toast('Race logged ✓')}
+  if(editId.racing!=null){
+    db.racing[game].runs=db.racing[game].runs.map(d=>d.id===editId.racing?e:d);
+    toast('Race updated ✓');
+  } else {
+    db.racing[game].runs.push(e);
+    toast('Race logged ✓');
+  }
   persist(); closeModal('racing'); renderGame('racing');
 }
 
 function delRacingEntry(game, id){
   appConfirm('Delete this race entry?',function(){
-    db.racing[game]=db.racing[game].filter(d=>d.id!==id);
+    db.racing[game].runs=db.racing[game].runs.filter(d=>d.id!==id);
     persist(); renderGame('racing'); toast('Deleted ✓');
   });
 }
 
 function clearRacingGame(game){
-  const n=(db.racing[game]||[]).length;
-  if(!n){toast('No entries to clear');return}
-  appConfirm('Clear all '+n+' race'+(n!==1?'s':'')+' for '+game+'? This cannot be undone.',function(){
-    db.racing[game]=[];
+  const n=(db.racing[game].runs||[]).length;
+  if(!n){toast('No entries to clear');return;}
+  appConfirm('Clear all '+n+' run'+(n!==1?'s':'')+' for '+game+'? This cannot be undone.',function(){
+    db.racing[game].runs=[];
     persist(); renderGame('racing'); toast('Cleared ✓');
   });
+}
+
+// ── TRACK MANAGEMENT ──────────────────────────────────────────────────────
+var _trackGame = null;
+function openTrackModal(){
+  _trackGame = document.getElementById('m-racing').dataset.role;
+  document.getElementById('track-name').value='';
+  document.getElementById('track-length').value='';
+  document.getElementById('track-lengthunit').value='km';
+  renderTrackList(_trackGame);
+  document.getElementById('m-racing').style.display='none';
+  document.getElementById('m-track').style.display='block';
+}
+
+function saveTrack(){
+  if(!_trackGame)return;
+  const name=document.getElementById('track-name').value.trim();
+  if(!name){toast('Enter a track name');return;}
+  const length=+document.getElementById('track-length').value||0;
+  const lengthUnit=document.getElementById('track-lengthunit').value;
+  const t={id:nidTrack[_trackGame]++,name,length,lengthUnit};
+  db.racing[_trackGame].tracks.push(t);
+  persist();
+  document.getElementById('track-name').value='';
+  document.getElementById('track-length').value='';
+  renderTrackList(_trackGame);
+  toast('Track saved ✓');
+}
+
+function delTrack(game, tid){
+  appConfirm('Delete this track? Runs on this track will remain but lose their track link.',function(){
+    db.racing[game].tracks=db.racing[game].tracks.filter(t=>t.id!==tid);
+    persist(); renderTrackList(game); renderGame('racing'); toast('Track deleted ✓');
+  });
+}
+
+function renderTrackList(game){
+  const el=document.getElementById('track-list');
+  if(!el)return;
+  const tracks=db.racing[game].tracks;
+  if(!tracks.length){el.innerHTML='<p style="color:var(--text3);font-size:13px;padding:8px 0">No tracks yet</p>';return;}
+  el.innerHTML=tracks.map(t=>`<div class="track-list-item">
+    <div><strong>${esc(t.name)}</strong>${t.length?'<span class="track-section-meta"> · '+t.length+' '+t.lengthUnit+'</span>':''}</div>
+    <button class="btn-icon" onclick="delTrack('${game}',${t.id})" title="Delete track">🗑️</button>
+  </div>`).join('');
+}
+
+function backToRacingModal(){
+  document.getElementById('m-track').style.display='none';
+  document.getElementById('m-racing').style.display='block';
+  if(_trackGame) populateTrackSel(_trackGame,'racing-track-sel',null);
 }
 
 function renderRacing(){
@@ -5702,24 +5801,25 @@ function renderRacing(){
     const key = racingKey(game);
     const el = document.getElementById('rp-racing-'+key);
     if(!el) return;
-    const data = db.racing[game]||[];
-    const n = data.length;
+    const gd = db.racing[game]||{tracks:[],runs:[]};
+    const runs = gd.runs||[];
+    const tracks = gd.tracks||[];
+    const n = runs.length;
     const color = '#f59e0b';
     const ck = 'racing-'+key;
 
     el.style.setProperty('--accent-clr', color);
 
-    // Stat summaries
-    const crHrs = data.filter(d=>d.crPerHr>0).map(d=>d.crPerHr);
-    const raceHrs = data.filter(d=>d.racesPerHr>0).map(d=>d.racesPerHr);
-    const totalCredits = data.reduce((s,d)=>s+d.credits,0);
-    const positions = data.filter(d=>d.position!=null).map(d=>d.position);
+    // Overall stats
+    const totalCredits = runs.reduce((s,d)=>s+(d.credits||0),0);
+    const crHrs = runs.filter(d=>d.crPerHr>0).map(d=>d.crPerHr);
+    const positions = runs.filter(d=>d.position!=null).map(d=>d.position);
     const bestPos = positions.length?Math.min(...positions):null;
     const podiums = positions.filter(p=>p<=3).length;
     const podiumPct = positions.length?Math.round((podiums/positions.length)*100):null;
     const posCardHtml = bestPos!=null?`<div class="stat-card"><div class="stat-name">Best Pos</div><div class="stat-rows">
       <div class="stat-row"><span class="srl">Best</span><span class="srv" style="color:${color}">P${bestPos}</span></div>
-      <div class="stat-row"><span class="srl">Races w/ pos</span><span class="srv">${positions.length}</span></div>
+      <div class="stat-row"><span class="srl">w/ pos</span><span class="srv">${positions.length}</span></div>
     </div></div>`:'';
     const podiumCardHtml = podiumPct!=null?`<div class="stat-card"><div class="stat-name">Podium %</div><div class="stat-rows">
       <div class="stat-row"><span class="srl">Rate</span><span class="srv" style="color:${color}">${podiumPct}%</span></div>
@@ -5727,59 +5827,93 @@ function renderRacing(){
     </div></div>`:'';
     const statsHtml = n ? `<div class="stats-grid" style="--accent-clr:${color}">
       ${crHrs.length?statCard('Cr/hr',crHrs):''}
-      ${raceHrs.length?statCard('Races/hr',raceHrs,1):''}
-      ${statCard('Credits',data.map(d=>d.credits))}
+      ${statCard('Credits',runs.map(d=>d.credits||0))}
       ${posCardHtml}${podiumCardHtml}
     </div>` : '';
 
-    // Table
-    const tableHtml = n ? `<div class="tbl-wrap"><table>
-      <thead><tr>
-        <th>Date</th><th>Race / Track</th><th>Pos</th><th>Car</th><th>Class</th><th>Dist</th>
-        <th>Time</th><th>Best Lap</th><th>Credits</th><th>Cr/hr</th><th></th>
-      </tr></thead>
-      <tbody>${data.slice().reverse().map(d=>{
-        const posClr=d.position===1?'#fbbf24':d.position===2?'#9ca3af':d.position===3?'#b87333':color;
-        const posStr=d.position!=null?'P'+d.position:'—';
-        return `<tr>
-        <td style="white-space:nowrap;color:var(--text2);font-size:12px">${fmtD(d.date)}</td>
-        <td><strong>${esc(d.race)}</strong></td>
-        <td style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${posClr}">${posStr}</td>
-        <td>${esc(d.car)||'—'}</td>
-        <td>${esc(d.carType)||'—'}</td>
-        <td>${d.distance?d.distance+' '+d.distUnit:'—'}</td>
-        <td style="font-family:'JetBrains Mono',monospace">${d.timeStr||'—'}</td>
-        <td style="font-family:'JetBrains Mono',monospace;color:var(--text2)">${fmtLap(d.bestLap)}</td>
-        <td style="font-family:'JetBrains Mono',monospace">${d.credits?d.credits.toLocaleString():'—'}</td>
-        <td style="font-family:'JetBrains Mono',monospace;color:${color}">${d.crPerHr?d.crPerHr.toLocaleString():'—'}</td>
-        <td style="white-space:nowrap">
-          <button class="btn-icon repeat" onclick="openRacingQuick('${game}',db.racing['${game}'].find(x=>x.id===${d.id}))" title="Quick repeat">＋</button>
-          <button class="btn-icon" onclick="openRacingModal('${game}',db.racing['${game}'].find(x=>x.id===${d.id}))" title="Edit">✏️</button>
-          <button class="btn-icon" onclick="delRacingEntry('${game}',${d.id})" title="Delete">🗑️</button>
-        </td>
-      </tr>`;}).join('')}</tbody>
-    </table></div>` : `<p style="color:var(--text3);padding:24px 0;text-align:center">No races logged yet. Hit the button below to add your first!</p>`;
+    // Per-track sections
+    const trackSections = tracks.map(track=>{
+      const tRuns = runs.filter(r=>r.trackId===track.id).slice().reverse();
+      if(!tRuns.length) return '';
+      const tCredits = tRuns.reduce((s,r)=>s+(r.credits||0),0);
+      const bestCr = tRuns.reduce((b,r)=>r.credits>b?r.credits:b,0);
+      const bestCrHr = tRuns.filter(r=>r.crPerHr>0).reduce((b,r)=>r.crPerHr>b?r.crPerHr:b,0);
+      const bestTime = tRuns.filter(r=>r.timeSecs>0).reduce((b,r)=>b===0||r.timeSecs<b?r.timeSecs:b,0);
+      const bestLapS = tRuns.filter(r=>r.lapTimeSecs>0).reduce((b,r)=>b===0||r.lapTimeSecs<b?r.lapTimeSecs:b,0);
+      const pillsHtml = `<div class="track-stat-pills">
+        ${tRuns.length?`<span class="track-stat-pill"><strong>${tRuns.length}</strong> run${tRuns.length!==1?'s':''}</span>`:''}
+        ${tCredits?`<span class="track-stat-pill"><strong>${tCredits.toLocaleString()}</strong> cr total</span>`:''}
+        ${bestCr?`<span class="track-stat-pill">best <strong>${bestCr.toLocaleString()}</strong> cr</span>`:''}
+        ${bestCrHr?`<span class="track-stat-pill">best <strong>${bestCrHr.toLocaleString()}</strong> cr/hr</span>`:''}
+        ${bestTime?`<span class="track-stat-pill">best time <strong>${fmtLap(bestTime)}</strong></span>`:''}
+        ${bestLapS?`<span class="track-stat-pill">best lap <strong>${fmtLap(bestLapS)}</strong></span>`:''}
+      </div>`;
+      const tableHtml = `<div class="tbl-wrap"><table>
+        <thead><tr><th>Date</th><th>Pos</th><th>Car</th><th>Class</th><th>Lap</th><th>Time</th><th>Credits</th><th>Cr/hr</th><th></th></tr></thead>
+        <tbody>${tRuns.map(d=>{
+          const posClr=d.position===1?'#fbbf24':d.position===2?'#9ca3af':d.position===3?'#b87333':color;
+          const posStr=d.position!=null?'P'+d.position:'—';
+          return `<tr>
+          <td style="white-space:nowrap;color:var(--text2);font-size:12px">${fmtD(d.date)}</td>
+          <td style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${posClr}">${posStr}</td>
+          <td>${esc(d.car)||'—'}</td>
+          <td>${esc(d.carType)||'—'}</td>
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--text2)">${d.lapTimeSecs?fmtLap(d.lapTimeSecs):'—'}</td>
+          <td style="font-family:'JetBrains Mono',monospace">${d.timeStr||'—'}</td>
+          <td style="font-family:'JetBrains Mono',monospace">${d.credits?d.credits.toLocaleString():'—'}</td>
+          <td style="font-family:'JetBrains Mono',monospace;color:${color}">${d.crPerHr?d.crPerHr.toLocaleString():'—'}</td>
+          <td style="white-space:nowrap">
+            <button class="btn-icon repeat" onclick="openRacingQuick('${game}',db.racing['${game}'].runs.find(x=>x.id===${d.id}))" title="Quick repeat">＋</button>
+            <button class="btn-icon" onclick="openRacingModal('${game}',db.racing['${game}'].runs.find(x=>x.id===${d.id}))" title="Edit">✏️</button>
+            <button class="btn-icon" onclick="delRacingEntry('${game}',${d.id})" title="Delete">🗑️</button>
+          </td></tr>`;}).join('')}</tbody>
+      </table></div>`;
+      const trackKey=ck+'-t'+track.id;
+      return `<div class="track-section-hdr" id="rsh-${trackKey}" onclick="toggleRoleSection('${trackKey}')" style="cursor:pointer" data-collapsed="0">
+        ${esc(track.name)}${track.length?'<span class="track-section-meta"> · '+track.length+' '+track.lengthUnit+'</span>':''}
+        <span class="section-collapse-chevron" style="margin-left:6px">▾</span>
+      </div>
+      <div class="role-section-body" id="rsb-${trackKey}">
+        ${pillsHtml}${tableHtml}
+      </div>`;
+    }).join('');
+
+    // Orphaned runs (no track match)
+    const orphans = runs.filter(r=>!tracks.some(t=>t.id===r.trackId)).slice().reverse();
+    const orphanHtml = orphans.length?`<div class="track-section-hdr" style="color:var(--text3)">Unlinked Runs</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Date</th><th>Pos</th><th>Car</th><th>Time</th><th>Credits</th><th></th></tr></thead>
+        <tbody>${orphans.map(d=>`<tr>
+          <td style="white-space:nowrap;color:var(--text2);font-size:12px">${fmtD(d.date)}</td>
+          <td style="font-family:'JetBrains Mono',monospace">${d.position!=null?'P'+d.position:'—'}</td>
+          <td>${esc(d.car)||'—'}</td>
+          <td style="font-family:'JetBrains Mono',monospace">${d.timeStr||'—'}</td>
+          <td style="font-family:'JetBrains Mono',monospace">${d.credits?d.credits.toLocaleString():'—'}</td>
+          <td><button class="btn-icon" onclick="delRacingEntry('${game}',${d.id})" title="Delete">🗑️</button></td>
+        </tr>`).join('')}</tbody>
+      </table></div>`:'';
+
+    const emptyHtml = !n?`<p style="color:var(--text3);padding:24px 0;text-align:center">No races logged yet. Create a track, then hit Log Race!</p>`:'';
 
     el.innerHTML = `
       <div class="section-header" id="rsh-${ck}" onclick="toggleRoleSection('${ck}')" data-collapsed="0">
         <div class="section-header-left">
           <h3>🏎️ ${esc(game)}<span class="section-collapse-chevron">▾</span></h3>
-          <p>${n} race${n!==1?'s':''} logged${totalCredits?'  ·  '+totalCredits.toLocaleString()+' total credits':''}</p>
+          <p>${n} run${n!==1?'s':''} · ${tracks.length} track${tracks.length!==1?'s':''}${totalCredits?'  ·  '+totalCredits.toLocaleString()+' cr total':''}</p>
         </div>
         <button class="btn-log racing" onclick="event.stopPropagation();openRacingModal('${game}')">+ Log Race</button>
-        ${n>0?`<button class="btn-clear-role" onclick="event.stopPropagation();clearRacingGame('${game}')" title="Clear all">🗑 Clear All</button>`:''}
+        ${n>0?`<button class="btn-clear-role" onclick="event.stopPropagation();clearRacingGame('${game}')" title="Clear all runs">🗑 Clear All</button>`:''}
       </div>
       <div class="role-section-body" id="rsb-${ck}">
-        ${statsHtml}
-        ${tableHtml}
+        ${statsHtml}${trackSections}${orphanHtml}${emptyHtml}
       </div>`;
 
-    // Restore collapse state
-    const rsh = document.getElementById('rsh-'+ck);
-    const rsb = document.getElementById('rsb-'+ck);
     try{
       const col = localStorage.getItem('rs_collapsed_'+ck);
-      if(col==='1'&&rsb){ rsb.classList.add('collapsed'); if(rsh) rsh.dataset.collapsed='1'; }
+      if(col==='1'){
+        const rsb=document.getElementById('rsb-'+ck); const rsh=document.getElementById('rsh-'+ck);
+        if(rsb)rsb.classList.add('collapsed'); if(rsh)rsh.dataset.collapsed='1';
+      }
     }catch(e){}
   });
 }
@@ -7599,9 +7733,23 @@ function renderAnalytics(){
     +'</div>';
   }
 
+  function buildFactionDistSection(){
+    const hdTotal = hdAll.reduce((s,r)=>s+r.data.length,0);
+    if(!hdTotal) return '';
+    return '<div class="analytics-section">'
+      +'<div class="analytics-section-title">Faction Distribution</div>'
+      +'<div class="analytics-donut-wrap">'
+        +'<div class="analytics-donut-card">'
+          +'<h4>Helldivers 2</h4>'
+          +'<div class="analytics-donut-inner"><canvas id="ac-hd-faction-donut"></canvas></div>'
+        +'</div>'
+      +'</div>'
+    +'</div>';
+  }
+
   const owChartsHtml = buildChartTiles('Overwatch', owAll, 'ow') + buildHeroFocusSection('ow');
   const rvChartsHtml = buildChartTiles('Marvel Rivals', rvAll, 'rv') + buildHeroFocusSection('rv');
-  const hdChartsHtml = buildChartTiles('Helldivers 2', hdAll, 'hd') + buildFactionFocusSection();
+  const hdChartsHtml = buildChartTiles('Helldivers 2', hdAll, 'hd') + buildFactionDistSection() + buildFactionFocusSection();
 
   // ── Role distribution doughnuts ─────────────────────────────────────────
   const owDonut = _aDonutCard('Overwatch', owAll);
@@ -7734,6 +7882,7 @@ function renderAnalytics(){
     _drawAnalyticsDonut('ac-overwatch-donut', owAll.map(r=>r.data.length), owAll.map(r=>r.role), owAll.map(r=>r.color));
     _drawAnalyticsDonut('ac-marvel-rivals-donut', rvAll.map(r=>r.data.length), rvAll.map(r=>r.role), rvAll.map(r=>r.color));
     _drawAnalyticsDonut('ac-helldivers-2-donut', hdAll.map(r=>r.data.length), hdAll.map(r=>r.role), hdAll.map(r=>r.color));
+    _drawAnalyticsDonut('ac-hd-faction-donut', hdAll.map(r=>r.data.length), hdAll.map(r=>r.role), hdAll.map(r=>r.color));
     // Restore faction focus chart if a faction was previously selected
     if(factionFocusState.faction) setTimeout(function(){ renderFactionFocusStats(); }, 0);
 
