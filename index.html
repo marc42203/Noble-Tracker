@@ -148,9 +148,9 @@
 .tab.active{color:#fff}
 [data-theme="light"] .diff-badge{color:var(--text)}
 [data-theme="light"] .clips-add-bar input,[data-theme="light"] .clips-add-bar select{color:var(--text)}
-[data-theme="light"] [data-theme="light"] [data-theme="light"] [data-theme="light"] .home-hero-title{color:#0a0a1a;text-shadow:0 1px 4px rgba(255,255,255,.6)}
-[data-theme="light"] [data-theme="light"] .home-hero-eyebrow{color:var(--text3)}
-[data-theme="light"] [data-theme="light"] .home-hero-sub{color:var(--text2)}
+[data-theme="light"] .home-hero-title{color:#0a0a1a !important;text-shadow:0 1px 3px rgba(255,255,255,.5) !important}
+[data-theme="light"] .home-hero-eyebrow{color:var(--text3) !important;text-shadow:none !important}
+[data-theme="light"] .home-hero-sub{color:var(--text2) !important}
 [data-theme="light"] .home-stat-val{color:var(--text)}
 [data-theme="light"] .home-stat-lbl{color:var(--text3)}
 [data-theme="light"] .home-stat-sub{color:var(--text2)}
@@ -168,6 +168,44 @@
 [data-theme="light"] .modal-bg .modal{box-shadow:0 20px 60px rgba(0,0,0,.15)}
 [data-theme="light"] .filter-select{color:var(--text)}
 [data-theme="light"] .search-input{color:var(--text)}
+/* ── Light mode: home game cards ── */
+[data-theme="light"] .home-game-card-bg{filter:blur(6px) brightness(.65) !important}
+[data-theme="light"] .home-game-card:hover .home-game-card-bg{filter:blur(4px) brightness(.72) !important}
+[data-theme="light"] .home-game-card-inner{background:linear-gradient(135deg,rgba(255,255,255,.45) 0%,rgba(255,255,255,.18) 100%)}
+[data-theme="light"] .home-game-info h3{text-shadow:0 1px 3px rgba(0,0,0,.18)}
+/* ── Light mode: home hero glow ── */
+[data-theme="light"] .home-hero-glow{background:radial-gradient(ellipse,rgba(0,0,0,.04),transparent 65%)}
+[data-theme="light"] .home-hero-logo{border-color:rgba(0,0,0,.1);box-shadow:0 8px 32px rgba(0,0,0,.15)}
+/* ── Light mode: section & role section ── */
+[data-theme="light"] .section-header-left p{color:var(--text2)}
+[data-theme="light"] .stat-row .srl{color:var(--text3)}
+[data-theme="light"] .stat-row .srv{color:var(--text)}
+[data-theme="light"] .stat-name{color:var(--text3)}
+[data-theme="light"] .role-section[data-accent] .section-header-left h3{color:var(--accent-clr)}
+/* ── Light mode: analytics ── */
+[data-theme="light"] .analytics-stat-label{color:var(--text3)}
+[data-theme="light"] .analytics-stat-val{color:var(--text)}
+[data-theme="light"] .analytics-stat-sub{color:var(--text3)}
+[data-theme="light"] .ac-tile{background:var(--surface-card);border-color:var(--border)}
+[data-theme="light"] .ac-tile-role{color:var(--text)}
+[data-theme="light"] .ac-tile-meta{color:var(--text2)}
+[data-theme="light"] .ac-tile-action{color:var(--text3)}
+[data-theme="light"] .analytics-donut-card{background:var(--surface-card);border-color:var(--border)}
+[data-theme="light"] .analytics-donut-card h4{color:var(--text)}
+/* ── Light mode: pills and focus ── */
+[data-theme="light"] .cex-pill{color:var(--text2);border-color:var(--border)}
+[data-theme="light"] .cex-pill:hover{color:var(--text)}
+[data-theme="light"] .hf-metric-pill{color:var(--text2);border-color:var(--border)}
+[data-theme="light"] .cf-game-btn{color:var(--text2)}
+[data-theme="light"] .cf-game-btn.active{background:var(--surface-card);color:var(--text)}
+[data-theme="light"] .hero-focus-dropdown{background:var(--surface-card);border-color:var(--border)}
+[data-theme="light"] .hero-focus-dd-item{color:var(--text2)}
+[data-theme="light"] .hero-focus-dd-item:hover{background:var(--surface2);color:var(--text)}
+[data-theme="light"] .hero-focus-portrait{background:var(--surface-card);border-color:var(--border)}
+/* ── Light mode: tbl-wrap / tables ── */
+[data-theme="light"] .tbl-wrap table{background:var(--surface-card)}
+[data-theme="light"] .track-stat-pill{background:var(--surface-card);border-color:var(--border);color:var(--text2)}
+[data-theme="light"] .quick-repeat-info{color:var(--text2)}
 
 /* ── THEME TOGGLE ── */
 .theme-toggle{margin-left:auto;display:flex;align-items:center;gap:8px}
@@ -382,6 +420,16 @@ tbody tr.exceptional:hover{background:linear-gradient(90deg,rgba(251,191,36,.1) 
 .analytics-content{padding:0 16px 32px;max-width:1200px;margin:0 auto}
 .analytics-section{margin-bottom:32px}
 .analytics-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text3);margin:0 0 12px}
+.cf-best-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px;margin-top:12px;position:relative;overflow:hidden}
+.cf-best-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--cf-best-color,#f97316)}
+.cf-best-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text3);margin-bottom:6px}
+.cf-best-date{font-size:12px;color:var(--text3);margin-bottom:8px}
+.cf-best-stats{display:flex;gap:20px;flex-wrap:wrap}
+.cf-best-stat{display:flex;flex-direction:column;gap:2px}
+.cf-best-stat-val{font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text);line-height:1}
+.cf-best-stat-val.highlight{color:var(--cf-best-color,#f97316)}
+.cf-best-stat-lbl{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+[data-theme="light"] .cf-best-card{background:var(--surface-card)}
 .analytics-row{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 .analytics-chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px}
 .analytics-chart-card h4{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin:0 0 12px}
@@ -7682,9 +7730,9 @@ function renderAnalytics(){
       var color = f==='Automaton'?'#ef4444':f==='Terminid'?'#f59e0b':'#a855f7';
       var n = (db.hd[f]||[]).length;
       var isActive = charFocusState.g==='hd' && charFocusState.name===f;
-      return '<button class="hf-metric-pill'+(isActive?' active':'')+'" id="cf-f-'+f.toLowerCase()+'"'
+      return '<button class="cex-pill'+(isActive?' active':'')+'" id="cf-f-'+f.toLowerCase()+'"'
         +' data-f="'+f+'" onclick="cfSelectFaction(\''+f+'\')"'
-        +' style="'+(isActive?'border-color:'+color+';color:'+color:'')+'">'+esc(f)
+        +' style="'+(isActive?'border-color:'+color+';color:'+color+';background:none':'')+'">'+esc(f)
         +(n?' <span style="opacity:.6;font-size:10px">('+n+')</span>':'')+'</button>';
     }).join('');
     var isHD = charFocusState.g==='hd';
@@ -7710,6 +7758,7 @@ function renderAnalytics(){
         +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+factBtns+'</div>'
       +'</div>'
       +'<div id="cf-stats" style="margin-top:8px"></div>'
+      +'<div id="cf-best"></div>'
       +'<div id="cf-chart-wrap" style="display:none;margin-top:12px">'
         +'<div class="hero-focus-metric-row" id="cf-metric-row"></div>'
         +'<div class="analytics-chart-card"><div style="height:220px"><canvas id="cf-canvas"></canvas></div></div>'
@@ -8046,8 +8095,10 @@ function cfSetGame(g){
     });
   }
   var statsEl = document.getElementById('cf-stats');
+  var bestEl = document.getElementById('cf-best');
   var chartWrap = document.getElementById('cf-chart-wrap');
   if(statsEl) statsEl.innerHTML = '';
+  if(bestEl) bestEl.innerHTML = '';
   if(chartWrap) chartWrap.style.display = 'none';
   if(charFocusChart){ charFocusChart.destroy(); charFocusChart = null; }
 }
@@ -8102,7 +8153,10 @@ function cfSetMetric(m){
     p.style.borderColor = active ? color : '';
     p.style.color = active ? color : '';
   });
-  if(charFocusState.name) cfRenderChart(cfGetSessions());
+  if(charFocusState.name){
+    cfRenderBest(cfGetSessions());
+    cfRenderChart(cfGetSessions());
+  }
 }
 
 function cfColor(){
@@ -8181,7 +8235,58 @@ function cfRenderStats(){
       +'>'+m.l+'</button>';
   }).join('');
   if(chartWrap) chartWrap.style.display = '';
+  cfRenderBest(sessions);
   setTimeout(function(){ cfRenderChart(sessions); }, 0);
+}
+
+function cfRenderBest(sessions){
+  var el = document.getElementById('cf-best');
+  if(!el || !sessions.length) return;
+  var g = charFocusState.g, m = charFocusState.metric, color = cfColor();
+  function metricVal(d){
+    if(m==='kd') return d.deaths?d.kills/d.deaths:d.kills||0;
+    if(m==='diff') return parseInt((d.diff||'0'),10)||0;
+    if(m==='deaths') return -(d.deaths||0); // fewer deaths = better
+    return d[m]||0;
+  }
+  var best = sessions.slice().sort(function(a,b){return metricVal(b)-metricVal(a);})[0];
+  if(!best){ el.innerHTML=''; return; }
+  var date = best.date ? new Date(best.date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) : '—';
+  var metricLabel = {kills:'Kills',deaths:'Deaths',damage:'Damage',healing:'Healing',kd:'K/D',diff:'Difficulty',strat:'Stratagems',samp:'Samples'}[m]||m;
+  var stats = [];
+  if(g==='hd'){
+    var diffNum = parseInt((best.diff||'0'),10)||0;
+    stats = [
+      {l:'Kills',v:best.kills||0,hi:m==='kills'},
+      {l:'Deaths',v:best.deaths||0,hi:m==='deaths'},
+      {l:'Difficulty',v:diffNum||'—',hi:m==='diff'},
+      {l:'Stratagems',v:best.strat||0,hi:m==='strat'},
+      {l:'Samples',v:best.samp||0,hi:m==='samp'},
+    ];
+    if(best.sfired>0) stats.push({l:'Accuracy',v:(best.slanded/best.sfired*100).toFixed(1)+'%',hi:false});
+  } else {
+    var kd = best.deaths?+(best.kills/best.deaths).toFixed(2):best.kills||0;
+    stats = [
+      {l:'Kills',v:best.kills||0,hi:m==='kills'},
+      {l:'Deaths',v:best.deaths||0,hi:m==='deaths'},
+      {l:'K/D',v:kd,hi:m==='kd'},
+    ];
+    if(best.damage) stats.push({l:'Damage',v:(best.damage||0).toLocaleString(),hi:m==='damage'});
+    if(best.healing) stats.push({l:'Healing',v:(best.healing||0).toLocaleString(),hi:m==='healing'});
+    if(best.map) stats.push({l:'Map',v:best.map,hi:false});
+    if(best.result) stats.push({l:'Result',v:best.result,hi:false});
+  }
+  el.innerHTML = '<div class="cf-best-card" style="--cf-best-color:'+color+'">'
+    +'<div class="cf-best-lbl">Best '+metricLabel+' Session</div>'
+    +'<div class="cf-best-date">'+date+'</div>'
+    +'<div class="cf-best-stats">'
+    +stats.map(function(s){
+      return '<div class="cf-best-stat">'
+        +'<div class="cf-best-stat-val'+(s.hi?' highlight':'')+'">'+s.v+'</div>'
+        +'<div class="cf-best-stat-lbl">'+s.l+'</div>'
+      +'</div>';
+    }).join('')
+    +'</div></div>';
 }
 
 function cfRenderChart(sessions){
