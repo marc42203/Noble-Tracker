@@ -414,6 +414,10 @@ tbody tr.exceptional:hover{background:linear-gradient(90deg,rgba(251,191,36,.1) 
 .hero-focus-portrait{width:56px;height:56px;border-radius:10px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;color:var(--text3);font-size:18px}
 .hero-focus-portrait img{width:100%;height:100%;object-fit:cover}
 .hero-focus-metric-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.cf-game-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.cf-game-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;transition:all .15s;font-family:inherit}
+.cf-game-btn:hover{border-color:var(--border2);color:var(--text)}
+.cf-game-btn.active{border-color:var(--border2);color:var(--text);background:var(--surface2)}
 /* Chart tiles */
 .ac-tiles-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
 .ac-tile{display:flex;align-items:center;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s}
@@ -7672,63 +7676,43 @@ function renderAnalytics(){
     </div>`;
   }
 
-  // ── Per-game Hero Focus builder ────────────────────────────────────────
-  function buildHeroFocusSection(g){
-    var roles = g==='ow' ? OW_ROLES : RV_ROLES;
-    var seen = {}, heroes = [];
-    roles.forEach(function(role){
-      (db[g][role]||[]).forEach(function(d){
-        if(d.char && !seen[d.char]){ seen[d.char]=1; heroes.push(d.char); }
-      });
-    });
-    heroes.sort(function(a,b){return a.localeCompare(b);});
-    if(!heroes.length) return '';
-    var items = heroes.map(function(h){
-      var heroSrc = getHeroSrc(h) || '';
-      var safeH = h.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      return '<div class="hero-focus-dd-item" onclick="selectHeroFocus(\''+safeH+'\',\''+g+'\')">' +
-        '<img class="hero-focus-dd-img" src="'+heroSrc+'" onerror="this.style.display=\'none\'" loading="lazy">' +
-        '<span>'+esc(h)+'</span></div>';
-    }).join('');
-    return '<div class="analytics-section">' +
-      '<div class="analytics-section-title">Hero Focus</div>' +
-      '<div class="hero-focus-search-row">' +
-        '<div class="hero-focus-search-wrap">' +
-          '<input class="hero-focus-input" id="hf-input-'+g+'" type="text" placeholder="Search hero…" autocomplete="off"' +
-            ' oninput="onHeroFocusInput(this.value,\''+g+'\')" onfocus="onHeroFocusInput(this.value,\''+g+'\')"' +
-            ' onblur="setTimeout(function(){var d=document.getElementById(\'hf-dd-'+g+'\');if(d)d.style.display=\'none\';},150)">' +
-          '<div class="hero-focus-dropdown" id="hf-dd-'+g+'" style="display:none">'+items+'</div>' +
-        '</div>' +
-        '<div class="hero-focus-portrait" id="hf-portrait-'+g+'"><span>—</span></div>' +
-      '</div>' +
-      '<div id="hf-stats-'+g+'"></div>' +
-      '<div id="hf-chart-wrap-'+g+'" style="display:none">' +
-        '<div class="hero-focus-metric-row" id="hf-metric-row-'+g+'"></div>' +
-        '<div class="analytics-chart-card"><div style="height:220px"><canvas id="hf-canvas-'+g+'"></canvas></div></div>' +
-      '</div>' +
-    '</div>';
-  }
-
-  // ── HD Faction Focus builder ────────────────────────────────────────────
-  function buildFactionFocusSection(){
-    var btns = HD_FACTIONS.map(function(f){
+  // ── Combined Character Focus builder ─────────────────────────────────────
+  function buildCharFocusSection(){
+    var factBtns = HD_FACTIONS.map(function(f){
       var color = f==='Automaton'?'#ef4444':f==='Terminid'?'#f59e0b':'#a855f7';
       var n = (db.hd[f]||[]).length;
-      var isActive = factionFocusState.faction===f;
-      return '<button class="hf-metric-pill faction-focus-btn'+(isActive?' active':'')+'" id="ff-btn-'+f.toLowerCase()+'"'
-        +' data-f="'+f+'" onclick="selectFactionFocus(\''+f+'\')"'
+      var isActive = charFocusState.g==='hd' && charFocusState.name===f;
+      return '<button class="hf-metric-pill'+(isActive?' active':'')+'" id="cf-f-'+f.toLowerCase()+'"'
+        +' data-f="'+f+'" onclick="cfSelectFaction(\''+f+'\')"'
         +' style="'+(isActive?'border-color:'+color+';color:'+color:'')+'">'+esc(f)
         +(n?' <span style="opacity:.6;font-size:10px">('+n+')</span>':'')+'</button>';
     }).join('');
+    var isHD = charFocusState.g==='hd';
     return '<div class="analytics-section">'
-      +'<div class="analytics-section-title">Faction Focus</div>'
-      +'<div class="hero-focus-search-row" style="flex-wrap:wrap;gap:8px">'
-        +'<div id="ff-btn-row" style="display:flex;gap:6px;flex-wrap:wrap">'+btns+'</div>'
+      +'<div class="analytics-section-title">Character Focus</div>'
+      +'<div class="cf-game-row">'
+        +'<button class="cf-game-btn'+(charFocusState.g==='ow'?' active':'')+'" id="cf-btn-ow" onclick="cfSetGame(\'ow\')">Overwatch</button>'
+        +'<button class="cf-game-btn'+(charFocusState.g==='rv'?' active':'')+'" id="cf-btn-rv" onclick="cfSetGame(\'rv\')">Marvel Rivals</button>'
+        +'<button class="cf-game-btn'+(charFocusState.g==='hd'?' active':'')+'" id="cf-btn-hd" onclick="cfSetGame(\'hd\')">Helldivers 2</button>'
       +'</div>'
-      +'<div id="ff-stats" style="margin-top:12px"></div>'
-      +'<div id="ff-chart-wrap" style="display:none">'
-        +'<div class="hero-focus-metric-row" id="ff-metric-row"></div>'
-        +'<div class="analytics-chart-card"><div style="height:220px"><canvas id="ff-canvas"></canvas></div></div>'
+      +'<div id="cf-hero-wrap"'+(isHD?' style="display:none"':'')+' >'
+        +'<div class="hero-focus-search-row">'
+          +'<div class="hero-focus-search-wrap">'
+            +'<input class="hero-focus-input" id="cf-input" type="text" placeholder="Search hero…" autocomplete="off"'
+              +' oninput="cfOnInput(this.value)" onfocus="cfOnInput(this.value)"'
+              +' onblur="setTimeout(function(){var d=document.getElementById(\'cf-dd\');if(d)d.style.display=\'none\';},150)">'
+            +'<div class="hero-focus-dropdown" id="cf-dd" style="display:none"></div>'
+          +'</div>'
+          +'<div class="hero-focus-portrait" id="cf-portrait"><span>—</span></div>'
+        +'</div>'
+      +'</div>'
+      +'<div id="cf-faction-wrap"'+(isHD?'':' style="display:none"')+' style="margin-top:4px">'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+factBtns+'</div>'
+      +'</div>'
+      +'<div id="cf-stats" style="margin-top:8px"></div>'
+      +'<div id="cf-chart-wrap" style="display:none;margin-top:12px">'
+        +'<div class="hero-focus-metric-row" id="cf-metric-row"></div>'
+        +'<div class="analytics-chart-card"><div style="height:220px"><canvas id="cf-canvas"></canvas></div></div>'
       +'</div>'
     +'</div>';
   }
@@ -7747,9 +7731,9 @@ function renderAnalytics(){
     +'</div>';
   }
 
-  const owChartsHtml = buildChartTiles('Overwatch', owAll, 'ow') + buildHeroFocusSection('ow');
-  const rvChartsHtml = buildChartTiles('Marvel Rivals', rvAll, 'rv') + buildHeroFocusSection('rv');
-  const hdChartsHtml = buildChartTiles('Helldivers 2', hdAll, 'hd') + buildFactionDistSection() + buildFactionFocusSection();
+  const owChartsHtml = buildChartTiles('Overwatch', owAll, 'ow');
+  const rvChartsHtml = buildChartTiles('Marvel Rivals', rvAll, 'rv');
+  const hdChartsHtml = buildChartTiles('Helldivers 2', hdAll, 'hd') + buildFactionDistSection();
 
   // ── Role distribution doughnuts ─────────────────────────────────────────
   const owDonut = _aDonutCard('Overwatch', owAll);
@@ -7864,6 +7848,7 @@ function renderAnalytics(){
       <div class="analytics-section-title">Most Played Heroes</div>
       <div class="analytics-chart-card"><div style="height:${Math.max(160,topHeroes.length*28)}px"><canvas id="ac-hero-bar"></canvas></div></div>
     </div>
+    ${buildCharFocusSection()}
     <div class="analytics-section">
       <div class="analytics-section-title">All-Role Summary</div>
       ${tableHtml}
@@ -7883,8 +7868,12 @@ function renderAnalytics(){
     _drawAnalyticsDonut('ac-marvel-rivals-donut', rvAll.map(r=>r.data.length), rvAll.map(r=>r.role), rvAll.map(r=>r.color));
     _drawAnalyticsDonut('ac-helldivers-2-donut', hdAll.map(r=>r.data.length), hdAll.map(r=>r.role), hdAll.map(r=>r.color));
     _drawAnalyticsDonut('ac-hd-faction-donut', hdAll.map(r=>r.data.length), hdAll.map(r=>r.role), hdAll.map(r=>r.color));
-    // Restore faction focus chart if a faction was previously selected
-    if(factionFocusState.faction) setTimeout(function(){ renderFactionFocusStats(); }, 0);
+    // Restore character focus state
+    cfSetGame(charFocusState.g);
+    if(charFocusState.name){
+      if(charFocusState.g==='hd') cfSelectFaction(charFocusState.name);
+      else cfSelectHero(charFocusState.name);
+    }
 
     // Trend line charts
     function drawTrend(id, labels, values, color, label){
@@ -8016,224 +8005,217 @@ function _drawAnalyticsDonut(canvasId, values, labels, colors){
   });
 }
 
-// ── HERO FOCUS ──────────────────────────────────────────────────────────────────
-var heroFocusCharts = {};
-var heroFocusState  = { ow: { hero: null, metric: 'kills' }, rv: { hero: null, metric: 'kills' } };
-var factionFocusState = { faction: null, metric: 'kills' };
+// ── CHARACTER FOCUS ───────────────────────────────────────────────────────────
+var charFocusState = { g: 'ow', name: null, metric: 'kills' };
+var charFocusChart = null;
 
-function selectFactionFocus(faction){
-  factionFocusState.faction = faction;
-  HD_FACTIONS.forEach(function(f){
-    var btn = document.getElementById('ff-btn-'+f.toLowerCase());
-    if(btn) btn.classList.toggle('active', f===faction);
+function cfSetGame(g){
+  charFocusState.g = g;
+  charFocusState.name = null;
+  charFocusState.metric = 'kills';
+  ['ow','rv','hd'].forEach(function(k){
+    var btn = document.getElementById('cf-btn-'+k);
+    if(btn) btn.classList.toggle('active', k===g);
   });
-  renderFactionFocusStats();
-}
-function factionFocusSetMetric(m){
-  factionFocusState.metric = m;
-  document.querySelectorAll('#ff-metric-row .hf-metric-pill').forEach(function(p){
-    p.classList.toggle('active', p.dataset.m===m);
-  });
-  var faction = factionFocusState.faction;
-  if(faction) renderFactionFocusChart(db.hd[faction]||[]);
-}
-function renderFactionFocusStats(){
-  var faction = factionFocusState.faction;
-  var statsEl = document.getElementById('ff-stats');
-  var chartWrap = document.getElementById('ff-chart-wrap');
-  if(!statsEl) return;
-  if(!faction){ statsEl.innerHTML=''; if(chartWrap) chartWrap.style.display='none'; return; }
-  var sessions = db.hd[faction]||[];
-  var n = sessions.length;
-  function avg(fn){ return n ? (sessions.reduce(function(s,d){return s+fn(d);},0)/n) : 0; }
-  function diffNum(d){ return parseInt((d.diff||'0'),10)||0; }
-  var avgDiff = avg(diffNum);
-  var avgAcc  = n ? (sessions.reduce(function(s,d){
-    return s+(d.sfired>0?d.slanded/d.sfired:0);
-  },0)/n*100) : 0;
-  var color = faction==='Automaton'?'#ef4444':faction==='Terminid'?'#f59e0b':'#a855f7';
-  statsEl.innerHTML = '<div class="hf-stat-grid">'+
-    '<div class="hf-stat-card"><div class="hf-stat-label">Sessions</div><div class="hf-stat-val">'+n+'</div></div>'+
-    '<div class="hf-stat-card"><div class="hf-stat-label">Avg Kills</div><div class="hf-stat-val">'+(n?avg(function(d){return d.kills||0;}).toFixed(1):'—')+'</div></div>'+
-    '<div class="hf-stat-card"><div class="hf-stat-label">Avg Deaths</div><div class="hf-stat-val">'+(n?avg(function(d){return d.deaths||0;}).toFixed(1):'—')+'</div></div>'+
-    '<div class="hf-stat-card"><div class="hf-stat-label">Avg Difficulty</div><div class="hf-stat-val">'+(n?avgDiff.toFixed(1):'—')+'</div></div>'+
-    '<div class="hf-stat-card"><div class="hf-stat-label">Avg Stratagems</div><div class="hf-stat-val">'+(n?avg(function(d){return d.strat||0;}).toFixed(1):'—')+'</div></div>'+
-    '<div class="hf-stat-card"><div class="hf-stat-label">Avg Samples</div><div class="hf-stat-val">'+(n?avg(function(d){return d.samp||0;}).toFixed(1):'—')+'</div></div>'+
-    '<div class="hf-stat-card"><div class="hf-stat-label">Accuracy</div><div class="hf-stat-val">'+(n&&avgAcc?avgAcc.toFixed(1)+'%':'—')+'</div></div>'+
-    '<div class="hf-stat-card"><div class="hf-stat-label">Best Kills</div><div class="hf-stat-val">'+(n?Math.max.apply(null,sessions.map(function(d){return d.kills||0;})):'—')+'</div></div>'+
-  '</div>';
-  if(chartWrap){
-    var metricRow = document.getElementById('ff-metric-row');
-    if(metricRow) metricRow.innerHTML = [
-      {m:'kills',label:'Kills'},{m:'deaths',label:'Deaths'},{m:'diff',label:'Difficulty'},
-      {m:'strat',label:'Stratagems'},{m:'samp',label:'Samples'}
-    ].map(function(x){
-      return '<button class="hf-metric-pill'+(factionFocusState.metric===x.m?' active':'')
-        +'" data-m="'+x.m+'" onclick="factionFocusSetMetric(\''+x.m+'\')" style="'
-        +(factionFocusState.metric===x.m?'border-color:'+color+';color:'+color:'')+'">'+x.label+'</button>';
-    }).join('');
-    chartWrap.style.display = n ? 'block' : 'none';
-    if(n) renderFactionFocusChart(sessions);
+  var heroWrap = document.getElementById('cf-hero-wrap');
+  var factWrap = document.getElementById('cf-faction-wrap');
+  if(heroWrap) heroWrap.style.display = g==='hd' ? 'none' : '';
+  if(factWrap) factWrap.style.display = g==='hd' ? '' : 'none';
+  if(g !== 'hd'){
+    var input = document.getElementById('cf-input');
+    if(input) input.value = '';
+    var portrait = document.getElementById('cf-portrait');
+    if(portrait) portrait.innerHTML = '<span>—</span>';
+    // Populate dropdown from canonical list
+    var dd = document.getElementById('cf-dd');
+    if(dd){
+      var chars = Object.values(g==='ow' ? OW_CHARS : RV_CHARS).flat().sort(function(a,b){return a.localeCompare(b);});
+      dd.innerHTML = chars.map(function(h){
+        var src = getHeroSrc(h)||'';
+        var safe = h.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        return '<div class="hero-focus-dd-item" onclick="cfSelectHero(\''+safe+'\')">'
+          +'<img class="hero-focus-dd-img" src="'+src+'" onerror="this.style.display=\'none\'" loading="lazy">'
+          +'<span>'+esc(h)+'</span></div>';
+      }).join('');
+      dd.style.display = 'none';
+    }
+  } else {
+    HD_FACTIONS.forEach(function(f){
+      var btn = document.getElementById('cf-f-'+f.toLowerCase());
+      if(btn){ btn.classList.remove('active'); btn.style.borderColor=''; btn.style.color=''; }
+    });
   }
+  var statsEl = document.getElementById('cf-stats');
+  var chartWrap = document.getElementById('cf-chart-wrap');
+  if(statsEl) statsEl.innerHTML = '';
+  if(chartWrap) chartWrap.style.display = 'none';
+  if(charFocusChart){ charFocusChart.destroy(); charFocusChart = null; }
 }
-function renderFactionFocusChart(sessions){
-  var canvasEl = document.getElementById('ff-canvas');
-  if(!canvasEl) return;
-  var m = factionFocusState.metric;
-  var faction = factionFocusState.faction;
-  var color = faction==='Automaton'?'#ef4444':faction==='Terminid'?'#f59e0b':'#a855f7';
-  var sorted = sessions.slice().filter(function(d){return d.date;}).sort(function(a,b){return a.date.localeCompare(b.date);});
-  if(!sorted.length) sorted = sessions.slice();
-  var labels = sorted.map(function(_,i){return '#'+(i+1);});
-  var values = sorted.map(function(d){
-    if(m==='diff') return parseInt((d.diff||'0'),10)||0;
-    return d[m]||0;
+
+function cfOnInput(val){
+  var dd = document.getElementById('cf-dd');
+  if(!dd) return;
+  var q = val.toLowerCase().trim();
+  var items = Array.from(dd.querySelectorAll('.hero-focus-dd-item'));
+  var visible = 0;
+  items.forEach(function(item){
+    var name = ((item.querySelector('span')||{}).textContent||'').toLowerCase();
+    var show = !q || name.includes(q);
+    item.style.display = show ? '' : 'none';
+    if(show) visible++;
   });
+  dd.style.display = visible ? 'block' : 'none';
+}
+
+function cfSelectHero(name){
+  charFocusState.name = name;
+  var input = document.getElementById('cf-input');
+  if(input) input.value = name;
+  var dd = document.getElementById('cf-dd');
+  if(dd) dd.style.display = 'none';
+  var src = getHeroSrc(name)||'/sprites/sp_pokeball_icon.png';
+  var portrait = document.getElementById('cf-portrait');
+  if(portrait) portrait.innerHTML = '<img src="'+src+'" onerror="this.src=\'/sprites/sp_pokeball_icon.png\'" style="width:100%;height:100%;object-fit:cover">';
+  cfRenderStats();
+}
+
+function cfSelectFaction(f){
+  charFocusState.name = f;
+  HD_FACTIONS.forEach(function(faction){
+    var btn = document.getElementById('cf-f-'+faction.toLowerCase());
+    if(!btn) return;
+    var color = faction==='Automaton'?'#ef4444':faction==='Terminid'?'#f59e0b':'#a855f7';
+    var active = faction===f;
+    btn.classList.toggle('active', active);
+    btn.style.borderColor = active ? color : '';
+    btn.style.color = active ? color : '';
+  });
+  cfRenderStats();
+}
+
+function cfSetMetric(m){
+  charFocusState.metric = m;
+  var color = cfColor();
+  document.querySelectorAll('#cf-metric-row .cex-pill').forEach(function(p){
+    var active = p.dataset.m===m;
+    p.classList.toggle('active', active);
+    p.style.borderColor = active ? color : '';
+    p.style.color = active ? color : '';
+  });
+  if(charFocusState.name) cfRenderChart(cfGetSessions());
+}
+
+function cfColor(){
+  var g = charFocusState.g, n = charFocusState.name;
+  if(g==='ow') return '#f97316';
+  if(g==='rv') return '#a855f7';
+  return n==='Automaton'?'#ef4444':n==='Terminid'?'#f59e0b':'#a855f7';
+}
+
+function cfGetSessions(){
+  var g = charFocusState.g, name = charFocusState.name;
+  if(!name) return [];
+  if(g==='hd') return (db.hd[name]||[]).slice().sort(function(a,b){return (a.date||'').localeCompare(b.date||'');});
+  var roles = g==='ow' ? OW_ROLES : RV_ROLES, sessions = [];
+  roles.forEach(function(role){
+    (db[g][role]||[]).filter(function(d){return d.char===name;}).forEach(function(d){
+      sessions.push(Object.assign({},d,{_role:role}));
+    });
+  });
+  return sessions.sort(function(a,b){return (a.date||'').localeCompare(b.date||'');});
+}
+
+function cfRenderStats(){
+  var g = charFocusState.g, name = charFocusState.name;
+  var statsEl = document.getElementById('cf-stats');
+  var chartWrap = document.getElementById('cf-chart-wrap');
+  if(!statsEl) return;
+  var sessions = cfGetSessions();
+  var n = sessions.length;
+  var color = cfColor();
+  if(!n){
+    statsEl.innerHTML = '<div class="analytics-empty">No sessions for '+esc(name||'—')+'.</div>';
+    if(chartWrap) chartWrap.style.display = 'none';
+    return;
+  }
+  function favg(fn){ return sessions.reduce(function(s,d){return s+fn(d);},0)/n; }
+  function fmt1(v){ return v>=1000?Math.round(v).toLocaleString():v.toFixed(v===Math.floor(v)?0:1); }
+  var cards;
+  if(g==='hd'){
+    var avgDiff = favg(function(d){return parseInt((d.diff||'0'),10)||0;});
+    var avgAcc = sessions.reduce(function(s,d){return s+(d.sfired>0?d.slanded/d.sfired:0);},0)/n*100;
+    cards = [
+      ['Sessions',n,''],['Avg Kills',n?fmt1(favg(function(d){return d.kills||0;})):'—','per mission'],
+      ['Avg Deaths',n?fmt1(favg(function(d){return d.deaths||0;})):'—','per mission'],
+      ['Avg Difficulty',n?avgDiff.toFixed(1):'—',''],['Avg Stratagems',n?fmt1(favg(function(d){return d.strat||0;})):'—',''],
+      ['Avg Samples',n?fmt1(favg(function(d){return d.samp||0;})):'—',''],
+      ['Accuracy',n&&avgAcc?avgAcc.toFixed(1)+'%':'—',''],
+      ['Best Kills',n?Math.max.apply(null,sessions.map(function(d){return d.kills||0;})):'—','']
+    ].map(function(c){return _aStatCard(c[0],c[1],c[2]);}).join('');
+  } else {
+    var kills = sessions.map(function(d){return d.kills||0;});
+    var deaths = sessions.map(function(d){return d.deaths||0;});
+    cards = [
+      _aStatCard('Sessions',n,''),
+      _aStatCard('Avg Kills',fmt1(favg(function(d){return d.kills||0;})),'per session'),
+      _aStatCard('Avg Deaths',fmt1(favg(function(d){return d.deaths||0;})),'per session'),
+      _aStatCard('Avg Damage',fmt1(favg(function(d){return d.damage||0;})),'per session'),
+      _aStatCard('Avg Healing',fmt1(favg(function(d){return d.healing||0;})),'per session'),
+      _aStatCard('Best Kills',Math.max.apply(null,kills.concat([0])),'')
+    ].join('');
+  }
+  statsEl.innerHTML = '<div class="analytics-stat-grid" style="margin-top:4px">'+cards+'</div>';
+  var metricDefs = g==='hd'
+    ? [{k:'kills',l:'Kills'},{k:'deaths',l:'Deaths'},{k:'diff',l:'Difficulty'},{k:'strat',l:'Stratagems'},{k:'samp',l:'Samples'}]
+    : [{k:'kills',l:'Kills'},{k:'deaths',l:'Deaths'},{k:'damage',l:'Damage'},{k:'healing',l:'Healing'},{k:'kd',l:'K/D'}].filter(function(m){
+        if(m.k==='kd') return sessions.some(function(d){return (d.deaths||0)>0;});
+        if(m.k==='healing') return sessions.some(function(d){return (d.healing||0)>0;});
+        return true;
+      });
+  if(!metricDefs.find(function(m){return m.k===charFocusState.metric;})) charFocusState.metric='kills';
+  var metricRow = document.getElementById('cf-metric-row');
+  if(metricRow) metricRow.innerHTML = metricDefs.map(function(m){
+    var active = charFocusState.metric===m.k;
+    return '<button class="cex-pill'+(active?' active':'')+'" data-m="'+m.k+'" onclick="cfSetMetric(\''+m.k+'\')"'
+      +(active?' style="border-color:'+color+';color:'+color+'"':'')
+      +'>'+m.l+'</button>';
+  }).join('');
+  if(chartWrap) chartWrap.style.display = '';
+  setTimeout(function(){ cfRenderChart(sessions); }, 0);
+}
+
+function cfRenderChart(sessions){
+  var canvas = document.getElementById('cf-canvas');
+  if(!canvas) return;
+  if(charFocusChart){ charFocusChart.destroy(); charFocusChart = null; }
+  var m = charFocusState.metric, color = cfColor();
   var isLight = document.documentElement.getAttribute('data-theme')==='light';
   var gridC = isLight?'rgba(0,0,0,.07)':'rgba(255,255,255,.05)';
   var tickC = isLight?'#888':'#5a5a70';
   var tipBg = isLight?'#ffffff':'#1a1a24';
-  if(analyticsCharts['ff-canvas']) analyticsCharts['ff-canvas'].destroy();
-  analyticsCharts['ff-canvas'] = new Chart(canvasEl.getContext('2d'),{
+  var labels = sessions.map(function(_,i){return '#'+(i+1);});
+  var values = sessions.map(function(d){
+    if(m==='kd') return d.deaths?+(d.kills/d.deaths).toFixed(2):d.kills||0;
+    if(m==='diff') return parseInt((d.diff||'0'),10)||0;
+    return d[m]||0;
+  });
+  var label = {kills:'Kills',deaths:'Deaths',damage:'Damage',healing:'Healing',kd:'K/D',diff:'Difficulty',strat:'Stratagems',samp:'Samples'}[m]||m;
+  charFocusChart = new Chart(canvas.getContext('2d'),{
     type:'line',
     data:{labels:labels, datasets:[{
-      label: m.charAt(0).toUpperCase()+m.slice(1),
-      data:values, borderColor:color, backgroundColor:color+'22',
-      borderWidth:2, pointRadius:sorted.length>30?0:3, fill:true, tension:.3
-    }]},
-    options:{responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{display:false}, tooltip:{backgroundColor:tipBg, padding:8,
-        callbacks:{title:function(ctx){return 'Mission '+ctx[0].label;}}}},
-      scales:{x:{display:false}, y:{grid:{color:gridC}, ticks:{color:tickC,font:{size:10}}, beginAtZero:true}}}
-  });
-}
-
-function onHeroFocusInput(val, g){
-  var dropdown = document.getElementById('hf-dd-'+g);
-  if(!dropdown) return;
-  var q = val.toLowerCase().trim();
-  if(!q){ dropdown.style.display='none'; return; }
-  var items = Array.from(dropdown.querySelectorAll('.hero-focus-dd-item'));
-  var visible = 0;
-  items.forEach(function(item){
-    var span = item.querySelector('span');
-    var name = span ? span.textContent.toLowerCase() : '';
-    var show = name.includes(q);
-    item.style.display = show ? '' : 'none';
-    if(show) visible++;
-  });
-  dropdown.style.display = visible ? 'block' : 'none';
-}
-
-function selectHeroFocus(heroName, g){
-  heroFocusState[g].hero = heroName;
-  var input = document.getElementById('hf-input-'+g);
-  if(input) input.value = heroName;
-  var heroSrc = getHeroSrc(heroName) || '/sprites/sp_pokeball_icon.png';
-  var portrait = document.getElementById('hf-portrait-'+g);
-  if(portrait) portrait.innerHTML = '<img src="'+heroSrc+'" onerror="this.src=\'/sprites/sp_pokeball_icon.png\'" style="width:100%;height:100%;object-fit:cover">';
-  renderHeroFocusStats(g);
-}
-
-function _hfGetSessions(hero, g){
-  var sessions = [];
-  var roles = g==='ow' ? OW_ROLES : RV_ROLES;
-  roles.forEach(function(role){
-    (db[g][role]||[]).filter(function(d){return d.char===hero;}).forEach(function(d){
-      sessions.push(Object.assign({},d,{_g:g,_role:role}));
-    });
-  });
-  return sessions;
-}
-
-function renderHeroFocusStats(g){
-  var state = heroFocusState[g];
-  var hero = state.hero;
-  if(!hero) return;
-  var allSessions = _hfGetSessions(hero, g);
-  var statsEl = document.getElementById('hf-stats-'+g);
-  var wrapEl  = document.getElementById('hf-chart-wrap-'+g);
-  if(!allSessions.length){
-    if(statsEl) statsEl.innerHTML = '<div class="analytics-empty">No sessions recorded for '+esc(hero)+'.</div>';
-    if(wrapEl)  wrapEl.style.display='none';
-    return;
-  }
-  function avg(arr){ return arr.length ? arr.reduce(function(a,b){return a+b;},0)/arr.length : 0; }
-  function fmt1(v){ return v>=1000?Math.round(v).toLocaleString():v.toFixed(v===Math.floor(v)?0:1); }
-  var kills  = allSessions.map(function(d){return d.kills||0;});
-  var deaths = allSessions.map(function(d){return d.deaths||0;});
-  var dmg    = allSessions.map(function(d){return d.damage||0;});
-  var heal   = allSessions.map(function(d){return d.healing||0;});
-  if(statsEl) statsEl.innerHTML = '<div class="analytics-stat-grid" style="margin-top:4px">' +
-    _aStatCard('Sessions', allSessions.length, '') +
-    _aStatCard('Avg Kills', fmt1(avg(kills)), 'per session') +
-    _aStatCard('Avg Deaths', fmt1(avg(deaths)), 'per session') +
-    _aStatCard('Avg Damage', fmt1(avg(dmg)), 'per session') +
-    _aStatCard('Avg Healing', fmt1(avg(heal)), 'per session') +
-    _aStatCard('Best Kills', Math.max.apply(null, kills.concat([0])), '') +
-    '</div>';
-  var metricDefs = [
-    {k:'kills',l:'Kills'},{k:'deaths',l:'Deaths'},{k:'damage',l:'Damage'},
-    {k:'healing',l:'Healing'},{k:'kd',l:'K/D'}
-  ].filter(function(m){
-    if(m.k==='kd') return deaths.some(function(v){return v>0;});
-    return allSessions.some(function(d){return (d[m.k]||0)>0;});
-  });
-  if(!metricDefs.find(function(m){return m.k===state.metric;})) state.metric='kills';
-  var metricRow = document.getElementById('hf-metric-row-'+g);
-  if(metricRow) metricRow.innerHTML = metricDefs.map(function(m){
-    return '<button class="cex-pill'+(state.metric===m.k?' active':'')+'" onclick="heroFocusSetMetric(this.dataset.m,\''+g+'\')" data-m="'+m.k+'">'+m.l+'</button>';
-  }).join('');
-  if(wrapEl) wrapEl.style.display='';
-  setTimeout(function(){ renderHeroFocusChart(allSessions, g); }, 0);
-}
-
-function heroFocusSetMetric(m, g){
-  heroFocusState[g].metric = m;
-  document.querySelectorAll('#hf-metric-row-'+g+' .cex-pill').forEach(function(p){
-    p.classList.toggle('active', p.dataset.m===m);
-  });
-  var hero = heroFocusState[g].hero;
-  if(!hero) return;
-  renderHeroFocusChart(_hfGetSessions(hero, g), g);
-}
-
-function renderHeroFocusChart(sessions, g){
-  var canvas = document.getElementById('hf-canvas-'+g);
-  if(!canvas) return;
-  if(heroFocusCharts[g]){ heroFocusCharts[g].destroy(); heroFocusCharts[g]=null; }
-  var metric = heroFocusState[g].metric;
-  var metricFn = metric==='kd'
-    ? function(d){return d.deaths?+(d.kills/d.deaths).toFixed(2):d.kills||0;}
-    : function(d){return d[metric]||0;};
-  var metricLabel = {kills:'Kills',deaths:'Deaths',damage:'Damage',healing:'Healing',kd:'K/D'}[metric]||metric;
-  var isLight = document.documentElement.getAttribute('data-theme')==='light';
-  var gridColor = isLight?'rgba(0,0,0,.07)':'rgba(255,255,255,.05)';
-  var tickColor = isLight?'#888':'#5a5a70';
-  var tooltipBg = isLight?'#ffffff':'#1a1a24';
-  var color = g==='ow'?'#f97316':'#a855f7';
-  var labels = sessions.map(function(_,i){return '#'+(i+1);});
-  var values = sessions.map(metricFn);
-  heroFocusCharts[g] = new Chart(canvas.getContext('2d'),{
-    type:'line',
-    data:{labels:labels,datasets:[{
-      label:metricLabel,data:values,
-      borderColor:color,backgroundColor:color+'33',
-      borderWidth:2.5,pointBackgroundColor:color,
-      pointRadius:4,pointHoverRadius:7,fill:true,tension:.35
+      label:label, data:values,
+      borderColor:color, backgroundColor:color+'33',
+      borderWidth:2.5, pointBackgroundColor:color,
+      pointRadius:sessions.length>30?0:3, pointHoverRadius:6,
+      fill:true, tension:.35
     }]},
     options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{backgroundColor:tooltipBg,padding:10,callbacks:{
-          title:function(ctx){return 'Session '+ctx[0].label;},
-          label:function(ctx){return metricLabel+': '+ctx.parsed.y;}
-        }}
-      },
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{backgroundColor:tipBg, padding:8,
+        callbacks:{title:function(ctx){return 'Session '+ctx[0].label;}, label:function(ctx){return label+': '+ctx.parsed.y;}}}},
       scales:{
-        x:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}}},
-        y:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}},beginAtZero:true}
+        x:{grid:{color:gridC}, ticks:{color:tickC, font:{size:10}}},
+        y:{grid:{color:gridC}, ticks:{color:tickC, font:{size:10}}, beginAtZero:true}
       }
     }
   });
