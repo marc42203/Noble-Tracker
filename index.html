@@ -7575,13 +7575,38 @@ function renderAnalytics(){
     '</div>';
   }
 
+  // ── HD Faction Focus builder ────────────────────────────────────────────
+  function buildFactionFocusSection(){
+    var btns = HD_FACTIONS.map(function(f){
+      var color = f==='Automaton'?'#ef4444':f==='Terminid'?'#f59e0b':'#a855f7';
+      var n = (db.hd[f]||[]).length;
+      var isActive = factionFocusState.faction===f;
+      return '<button class="hf-metric-pill faction-focus-btn'+(isActive?' active':'')+'" id="ff-btn-'+f.toLowerCase()+'"'
+        +' data-f="'+f+'" onclick="selectFactionFocus(\''+f+'\')"'
+        +' style="'+(isActive?'border-color:'+color+';color:'+color:'')+'">'+esc(f)
+        +(n?' <span style="opacity:.6;font-size:10px">('+n+')</span>':'')+'</button>';
+    }).join('');
+    return '<div class="analytics-section">'
+      +'<div class="analytics-section-title">Faction Focus</div>'
+      +'<div class="hero-focus-search-row" style="flex-wrap:wrap;gap:8px">'
+        +'<div id="ff-btn-row" style="display:flex;gap:6px;flex-wrap:wrap">'+btns+'</div>'
+      +'</div>'
+      +'<div id="ff-stats" style="margin-top:12px"></div>'
+      +'<div id="ff-chart-wrap" style="display:none">'
+        +'<div class="hero-focus-metric-row" id="ff-metric-row"></div>'
+        +'<div class="analytics-chart-card"><div style="height:220px"><canvas id="ff-canvas"></canvas></div></div>'
+      +'</div>'
+    +'</div>';
+  }
+
   const owChartsHtml = buildChartTiles('Overwatch', owAll, 'ow') + buildHeroFocusSection('ow');
   const rvChartsHtml = buildChartTiles('Marvel Rivals', rvAll, 'rv') + buildHeroFocusSection('rv');
-  const hdChartsHtml = buildChartTiles('Helldivers 2', hdAll, 'hd');
+  const hdChartsHtml = buildChartTiles('Helldivers 2', hdAll, 'hd') + buildFactionFocusSection();
 
   // ── Role distribution doughnuts ─────────────────────────────────────────
   const owDonut = _aDonutCard('Overwatch', owAll);
   const rvDonut = _aDonutCard('Marvel Rivals', rvAll);
+  const hdDonut = _aDonutCard('Helldivers 2', hdAll);
 
   // ── Avg performance bar charts ──────────────────────────────────────────
   const barLabels   = allCombat.map(r=>r.role);
@@ -7614,9 +7639,10 @@ function renderAnalytics(){
   const trendDamage  = rollingAvg(allSorted, d=>d.damage||0);
   const trendKD      = rollingAvg(allSorted, d=>d.deaths?(d.kills/d.deaths):d.kills||0);
 
-  // ── Sessions over time (by month) ───────────────────────────────────────
+  // ── Sessions over time (by month, all games) ────────────────────────────
+  const allSortedWithHD = [...allSorted, ...hdAll.flatMap(({data})=>data.map(d=>Object.assign({},d)))].filter(d=>d.date).sort((a,b)=>a.date.localeCompare(b.date));
   const monthCounts = {};
-  allSorted.forEach(d=>{
+  allSortedWithHD.forEach(d=>{
     const m = d.date.slice(0,7);
     monthCounts[m] = (monthCounts[m]||0) + 1;
   });
@@ -7668,7 +7694,7 @@ function renderAnalytics(){
     ${hdChartsHtml}
     <div class="analytics-section">
       <div class="analytics-section-title">Role Distribution</div>
-      <div class="analytics-donut-wrap">${owDonut}${rvDonut}</div>
+      <div class="analytics-donut-wrap">${owDonut}${rvDonut}${hdDonut}</div>
     </div>
     <div class="analytics-section">
       <div class="analytics-section-title">Performance by Role</div>
@@ -7707,6 +7733,9 @@ function renderAnalytics(){
     _drawAnalyticsBar('ac-damage-bar', barLabels, dmgBarValues, barColors, barBg, 'Avg Damage');
     _drawAnalyticsDonut('ac-overwatch-donut', owAll.map(r=>r.data.length), owAll.map(r=>r.role), owAll.map(r=>r.color));
     _drawAnalyticsDonut('ac-marvel-rivals-donut', rvAll.map(r=>r.data.length), rvAll.map(r=>r.role), rvAll.map(r=>r.color));
+    _drawAnalyticsDonut('ac-helldivers-2-donut', hdAll.map(r=>r.data.length), hdAll.map(r=>r.role), hdAll.map(r=>r.color));
+    // Restore faction focus chart if a faction was previously selected
+    if(factionFocusState.faction) setTimeout(function(){ renderFactionFocusStats(); }, 0);
 
     // Trend line charts
     function drawTrend(id, labels, values, color, label){
@@ -7841,6 +7870,94 @@ function _drawAnalyticsDonut(canvasId, values, labels, colors){
 // ── HERO FOCUS ──────────────────────────────────────────────────────────────────
 var heroFocusCharts = {};
 var heroFocusState  = { ow: { hero: null, metric: 'kills' }, rv: { hero: null, metric: 'kills' } };
+var factionFocusState = { faction: null, metric: 'kills' };
+
+function selectFactionFocus(faction){
+  factionFocusState.faction = faction;
+  HD_FACTIONS.forEach(function(f){
+    var btn = document.getElementById('ff-btn-'+f.toLowerCase());
+    if(btn) btn.classList.toggle('active', f===faction);
+  });
+  renderFactionFocusStats();
+}
+function factionFocusSetMetric(m){
+  factionFocusState.metric = m;
+  document.querySelectorAll('#ff-metric-row .hf-metric-pill').forEach(function(p){
+    p.classList.toggle('active', p.dataset.m===m);
+  });
+  var faction = factionFocusState.faction;
+  if(faction) renderFactionFocusChart(db.hd[faction]||[]);
+}
+function renderFactionFocusStats(){
+  var faction = factionFocusState.faction;
+  var statsEl = document.getElementById('ff-stats');
+  var chartWrap = document.getElementById('ff-chart-wrap');
+  if(!statsEl) return;
+  if(!faction){ statsEl.innerHTML=''; if(chartWrap) chartWrap.style.display='none'; return; }
+  var sessions = db.hd[faction]||[];
+  var n = sessions.length;
+  function avg(fn){ return n ? (sessions.reduce(function(s,d){return s+fn(d);},0)/n) : 0; }
+  function diffNum(d){ return parseInt((d.diff||'0'),10)||0; }
+  var avgDiff = avg(diffNum);
+  var avgAcc  = n ? (sessions.reduce(function(s,d){
+    return s+(d.sfired>0?d.slanded/d.sfired:0);
+  },0)/n*100) : 0;
+  var color = faction==='Automaton'?'#ef4444':faction==='Terminid'?'#f59e0b':'#a855f7';
+  statsEl.innerHTML = '<div class="hf-stat-grid">'+
+    '<div class="hf-stat-card"><div class="hf-stat-label">Sessions</div><div class="hf-stat-val">'+n+'</div></div>'+
+    '<div class="hf-stat-card"><div class="hf-stat-label">Avg Kills</div><div class="hf-stat-val">'+(n?avg(function(d){return d.kills||0;}).toFixed(1):'—')+'</div></div>'+
+    '<div class="hf-stat-card"><div class="hf-stat-label">Avg Deaths</div><div class="hf-stat-val">'+(n?avg(function(d){return d.deaths||0;}).toFixed(1):'—')+'</div></div>'+
+    '<div class="hf-stat-card"><div class="hf-stat-label">Avg Difficulty</div><div class="hf-stat-val">'+(n?avgDiff.toFixed(1):'—')+'</div></div>'+
+    '<div class="hf-stat-card"><div class="hf-stat-label">Avg Stratagems</div><div class="hf-stat-val">'+(n?avg(function(d){return d.strat||0;}).toFixed(1):'—')+'</div></div>'+
+    '<div class="hf-stat-card"><div class="hf-stat-label">Avg Samples</div><div class="hf-stat-val">'+(n?avg(function(d){return d.samp||0;}).toFixed(1):'—')+'</div></div>'+
+    '<div class="hf-stat-card"><div class="hf-stat-label">Accuracy</div><div class="hf-stat-val">'+(n&&avgAcc?avgAcc.toFixed(1)+'%':'—')+'</div></div>'+
+    '<div class="hf-stat-card"><div class="hf-stat-label">Best Kills</div><div class="hf-stat-val">'+(n?Math.max.apply(null,sessions.map(function(d){return d.kills||0;})):'—')+'</div></div>'+
+  '</div>';
+  if(chartWrap){
+    var metricRow = document.getElementById('ff-metric-row');
+    if(metricRow) metricRow.innerHTML = [
+      {m:'kills',label:'Kills'},{m:'deaths',label:'Deaths'},{m:'diff',label:'Difficulty'},
+      {m:'strat',label:'Stratagems'},{m:'samp',label:'Samples'}
+    ].map(function(x){
+      return '<button class="hf-metric-pill'+(factionFocusState.metric===x.m?' active':'')
+        +'" data-m="'+x.m+'" onclick="factionFocusSetMetric(\''+x.m+'\')" style="'
+        +(factionFocusState.metric===x.m?'border-color:'+color+';color:'+color:'')+'">'+x.label+'</button>';
+    }).join('');
+    chartWrap.style.display = n ? 'block' : 'none';
+    if(n) renderFactionFocusChart(sessions);
+  }
+}
+function renderFactionFocusChart(sessions){
+  var canvasEl = document.getElementById('ff-canvas');
+  if(!canvasEl) return;
+  var m = factionFocusState.metric;
+  var faction = factionFocusState.faction;
+  var color = faction==='Automaton'?'#ef4444':faction==='Terminid'?'#f59e0b':'#a855f7';
+  var sorted = sessions.slice().filter(function(d){return d.date;}).sort(function(a,b){return a.date.localeCompare(b.date);});
+  if(!sorted.length) sorted = sessions.slice();
+  var labels = sorted.map(function(_,i){return '#'+(i+1);});
+  var values = sorted.map(function(d){
+    if(m==='diff') return parseInt((d.diff||'0'),10)||0;
+    return d[m]||0;
+  });
+  var isLight = document.documentElement.getAttribute('data-theme')==='light';
+  var gridC = isLight?'rgba(0,0,0,.07)':'rgba(255,255,255,.05)';
+  var tickC = isLight?'#888':'#5a5a70';
+  var tipBg = isLight?'#ffffff':'#1a1a24';
+  if(analyticsCharts['ff-canvas']) analyticsCharts['ff-canvas'].destroy();
+  analyticsCharts['ff-canvas'] = new Chart(canvasEl.getContext('2d'),{
+    type:'line',
+    data:{labels:labels, datasets:[{
+      label: m.charAt(0).toUpperCase()+m.slice(1),
+      data:values, borderColor:color, backgroundColor:color+'22',
+      borderWidth:2, pointRadius:sorted.length>30?0:3, fill:true, tension:.3
+    }]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{backgroundColor:tipBg, padding:8,
+        callbacks:{title:function(ctx){return 'Mission '+ctx[0].label;}}}},
+      scales:{x:{display:false}, y:{grid:{color:gridC}, ticks:{color:tickC,font:{size:10}}, beginAtZero:true}}}
+  });
+}
 
 function onHeroFocusInput(val, g){
   var dropdown = document.getElementById('hf-dd-'+g);
