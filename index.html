@@ -1963,15 +1963,6 @@ tr.underperforming-row .bad-stat{
 .ps-search-poke-btn img{width:48px;height:48px;object-fit:contain;image-rendering:pixelated}
 .ps-search-poke-btn span{font-size:9px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:84px}
 
-.ps-api-bar{background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;gap:4px}
-.ps-api-bar-inner{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.ps-api-label{font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap}
-.ps-api-input-wrap{display:flex;align-items:center;flex:1;min-width:200px;background:var(--surface3);border:1px solid var(--border);border-radius:8px;overflow:hidden}
-.ps-api-key-input{flex:1;background:transparent;border:none;outline:none;padding:6px 10px;font-size:12px;color:var(--text);font-family:monospace}
-.ps-api-toggle-btn{background:none;border:none;cursor:pointer;padding:0 8px;font-size:14px;color:var(--text3);line-height:1}
-.ps-api-status{font-size:11px;font-weight:600;white-space:nowrap}
-.ps-api-status.ok{color:#22c55e}.ps-api-status.err{color:#ef4444}.ps-api-status.pending{color:#f59e0b}
-.ps-api-hint{font-size:10px;color:var(--text3)}
 
 .ps-add-dd-item{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;font-size:13px;color:var(--text);transition:background .1s}
 .ps-add-dd-item:hover{background:var(--surface2)}
@@ -3396,21 +3387,6 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--accent-clr,var(--bo
   <div class="panel-banner" id="banner-ps"><img id="bimg-ps" src=""></div>
 
 
-  <!-- API Key Bar -->
-  <div class="ps-api-bar" id="ps-api-bar">
-    <div class="ps-api-bar-inner">
-      <span class="ps-api-label">🤖 Claude API Key</span>
-      <div class="ps-api-input-wrap">
-        <input type="password" id="ps-api-key-input" class="ps-api-key-input"
-          placeholder="sk-ant-…  (stored locally, never sent anywhere else)"
-          oninput="psSaveApiKey(this.value)">
-        <button class="ps-api-toggle-btn" onclick="psToggleApiKeyVisible()" title="Show/hide key">👁</button>
-      </div>
-      <span class="ps-api-status" id="ps-api-status"></span>
-    </div>
-    <div class="ps-api-hint">✅ AI features now use free Smogon data — no API key needed! Suggestions pull live sets from play.pokemonshowdown.com.</div>
-  </div>
-
   <!-- PS Subtab Bar -->
   <div class="subtab-bar" data-group="ps" style="margin:12px 12px 0">
     <button class="subtab-btn active" data-panel="ps-sub-teams" onclick="switchSubtab('ps','ps-sub-teams')">🎮 Team Builder</button>
@@ -3418,9 +3394,12 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--accent-clr,var(--bo
 
   <div id="ps-sub-teams" class="subtab-panel active" data-group="ps">
   <!-- Section: Team Builder -->
-  <div class="ps-section-title">
-    <h3 class="ps-section-h3"><img id="ps-teambuilder-pb" class="ps-pb-icon"  src="/sprites/ps-teambuilder-pb.png" style="width:28px;height:28px;vertical-align:middle;margin-right:6px;image-rendering:auto"> Team Builder</h3>
-    <p class="ps-section-sub">Build teams, import from Showdown, and track win/loss records</p>
+  <div class="ps-section-title" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div>
+      <h3 class="ps-section-h3"><img id="ps-teambuilder-pb" class="ps-pb-icon" src="/sprites/ps-teambuilder-pb.png" style="width:28px;height:28px;vertical-align:middle;margin-right:6px;image-rendering:auto"> Team Builder</h3>
+      <p class="ps-section-sub">Build teams, import from Showdown, and track win/loss records</p>
+    </div>
+    <span id="ps-data-badge" style="font-size:10px;font-weight:600;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;white-space:nowrap;margin-top:6px" title="AI suggestions powered by Smogon usage stats">Smogon stats</span>
   </div>
 
   <div class="ps-teams-wrap">
@@ -4990,34 +4969,6 @@ var PS_MOVE_TYPES = {
   "Moonblast":"Fairy","Dazzling Gleam":"Fairy","Play Rough":"Fairy","Draining Kiss":"Fairy","Disarming Voice":"Fairy","Fleur Cannon":"Fairy","Geomancy":"Fairy","Spirit Break":"Fairy","Nature's Madness":"Fairy","Springtide Storm":"Fairy","Moongeist Beam":"Fairy","Alluring Voice":"Fairy","Syrup Bomb":"Fairy",
   "Body Slam":"Normal","Hyper Voice":"Normal","Extreme Speed":"Normal","Facade":"Normal","Quick Attack":"Normal","Boomburst":"Normal","Tri Attack":"Normal","Recover":"Normal","Soft-Boiled":"Normal","Milk Drink":"Normal","Slack Off":"Normal","Roost":"Normal","Wish":"Normal","Protect":"Normal","Substitute":"Normal","Swords Dance":"Normal","Rapid Spin":"Normal","Knock Off":"Dark","Defog":"Flying"
 };
-var PS_API_KEY_STORE = 'noble_ps_api_key';
-function psGetApiKey() { return localStorage.getItem(PS_API_KEY_STORE) || ''; }
-function psSaveApiKey(val) {
-  if (val && val.trim()) {
-    localStorage.setItem(PS_API_KEY_STORE, val.trim());
-    psSetApiStatus('✓ Key saved', 'ok');
-  } else {
-    localStorage.removeItem(PS_API_KEY_STORE);
-    psSetApiStatus('', '');
-  }
-}
-function psSetApiStatus(msg, state) {
-  var el = document.getElementById('ps-api-status');
-  if (!el) return;
-  el.textContent = msg;
-  el.className = 'ps-api-status ' + (state||'');
-}
-function psToggleApiKeyVisible() {
-  var inp = document.getElementById('ps-api-key-input');
-  if (!inp) return;
-  inp.type = inp.type === 'password' ? 'text' : 'password';
-}
-function psInitApiKeyBar() {
-  var inp = document.getElementById('ps-api-key-input');
-  if (!inp) return;
-  var saved = psGetApiKey();
-  if (saved) { inp.value = saved; psSetApiStatus('✓ Key loaded', 'ok'); }
-}
 var PS_POKE_DEX = {"bulbasaur":1,"ivysaur":2,"venusaur":3,"charmander":4,"charmeleon":5,"charizard":6,"squirtle":7,"wartortle":8,"blastoise":9,"caterpie":10,"metapod":11,"butterfree":12,"weedle":13,"kakuna":14,"beedrill":15,"pidgey":16,"pidgeotto":17,"pidgeot":18,"rattata":19,"raticate":20,"spearow":21,"fearow":22,"ekans":23,"arbok":24,"pikachu":25,"raichu":26,"sandshrew":27,"sandslash":28,"nidoran-f":29,"nidorina":30,"nidoqueen":31,"nidoran-m":32,"nidorino":33,"nidoking":34,"clefairy":35,"clefable":36,"vulpix":37,"ninetales":38,"jigglypuff":39,"wigglytuff":40,"zubat":41,"golbat":42,"oddish":43,"gloom":44,"vileplume":45,"paras":46,"parasect":47,"venonat":48,"venomoth":49,"diglett":50,"dugtrio":51,"meowth":52,"persian":53,"psyduck":54,"golduck":55,"mankey":56,"primeape":57,"growlithe":58,"arcanine":59,"poliwag":60,"poliwhirl":61,"poliwrath":62,"abra":63,"kadabra":64,"alakazam":65,"machop":66,"machoke":67,"machamp":68,"bellsprout":69,"weepinbell":70,"victreebel":71,"tentacool":72,"tentacruel":73,"geodude":74,"graveler":75,"golem":76,"ponyta":77,"rapidash":78,"slowpoke":79,"slowbro":80,"magnemite":81,"magneton":82,"farfetchd":83,"doduo":84,"dodrio":85,"seel":86,"dewgong":87,"grimer":88,"muk":89,"shellder":90,"cloyster":91,"gastly":92,"haunter":93,"gengar":94,"onix":95,"drowzee":96,"hypno":97,"krabby":98,"kingler":99,"voltorb":100,"electrode":101,"exeggcute":102,"exeggutor":103,"cubone":104,"marowak":105,"hitmonlee":106,"hitmonchan":107,"lickitung":108,"koffing":109,"weezing":110,"rhyhorn":111,"rhydon":112,"chansey":113,"tangela":114,"kangaskhan":115,"horsea":116,"seadra":117,"goldeen":118,"seaking":119,"staryu":120,"starmie":121,"mr mime":122,"scyther":123,"jynx":124,"electabuzz":125,"magmar":126,"pinsir":127,"tauros":128,"magikarp":129,"gyarados":130,"lapras":131,"ditto":132,"eevee":133,"vaporeon":134,"jolteon":135,"flareon":136,"porygon":137,"omanyte":138,"omastar":139,"kabuto":140,"kabutops":141,"aerodactyl":142,"snorlax":143,"articuno":144,"zapdos":145,"moltres":146,"dratini":147,"dragonair":148,"dragonite":149,"mewtwo":150,"mew":151,"chikorita":152,"bayleef":153,"meganium":154,"cyndaquil":155,"quilava":156,"typhlosion":157,"totodile":158,"croconaw":159,"feraligatr":160,"sentret":161,"furret":162,"hoothoot":163,"noctowl":164,"ledyba":165,"ledian":166,"spinarak":167,"ariados":168,"crobat":169,"chinchou":170,"lanturn":171,"pichu":172,"cleffa":173,"igglybuff":174,"togepi":175,"togetic":176,"natu":177,"xatu":178,"mareep":179,"flaaffy":180,"ampharos":181,"bellossom":182,"marill":183,"azumarill":184,"sudowoodo":185,"politoed":186,"hoppip":187,"skiploom":188,"jumpluff":189,"aipom":190,"sunkern":191,"sunflora":192,"yanma":193,"wooper":194,"quagsire":195,"espeon":196,"umbreon":197,"murkrow":198,"slowking":199,"misdreavus":200,"unown":201,"wobbuffet":202,"girafarig":203,"pineco":204,"forretress":205,"dunsparce":206,"gligar":207,"steelix":208,"snubbull":209,"granbull":210,"qwilfish":211,"scizor":212,"shuckle":213,"heracross":214,"sneasel":215,"teddiursa":216,"ursaring":217,"slugma":218,"magcargo":219,"swinub":220,"piloswine":221,"corsola":222,"remoraid":223,"octillery":224,"delibird":225,"mantine":226,"skarmory":227,"houndour":228,"houndoom":229,"kingdra":230,"phanpy":231,"donphan":232,"porygon2":233,"stantler":234,"smeargle":235,"tyrogue":236,"hitmontop":237,"smoochum":238,"elekid":239,"magby":240,"miltank":241,"blissey":242,"raikou":243,"entei":244,"suicune":245,"larvitar":246,"pupitar":247,"tyranitar":248,"lugia":249,"ho-oh":250,"celebi":251,"treecko":252,"grovyle":253,"sceptile":254,"torchic":255,"combusken":256,"blaziken":257,"mudkip":258,"marshtomp":259,"swampert":260,"poochyena":261,"mightyena":262,"zigzagoon":263,"linoone":264,"wurmple":265,"silcoon":266,"beautifly":267,"cascoon":268,"dustox":269,"lotad":270,"lombre":271,"ludicolo":272,"seedot":273,"nuzleaf":274,"shiftry":275,"taillow":276,"swellow":277,"wingull":278,"pelipper":279,"ralts":280,"kirlia":281,"gardevoir":282,"surskit":283,"masquerain":284,"shroomish":285,"breloom":286,"slakoth":287,"vigoroth":288,"slaking":289,"nincada":290,"ninjask":291,"shedinja":292,"whismur":293,"loudred":294,"exploud":295,"makuhita":296,"hariyama":297,"azurill":298,"nosepass":299,"skitty":300,"delcatty":301,"sableye":302,"mawile":303,"aron":304,"lairon":305,"aggron":306,"meditite":307,"medicham":308,"electrike":309,"manectric":310,"plusle":311,"minun":312,"volbeat":313,"illumise":314,"roselia":315,"gulpin":316,"swalot":317,"carvanha":318,"sharpedo":319,"wailmer":320,"wailord":321,"numel":322,"camerupt":323,"torkoal":324,"spoink":325,"grumpig":326,"spinda":327,"trapinch":328,"vibrava":329,"flygon":330,"cacnea":331,"cacturne":332,"swablu":333,"altaria":334,"zangoose":335,"seviper":336,"lunatone":337,"solrock":338,"barboach":339,"whiscash":340,"corphish":341,"crawdaunt":342,"baltoy":343,"claydol":344,"lileep":345,"cradily":346,"anorith":347,"armaldo":348,"feebas":349,"milotic":350,"castform":351,"kecleon":352,"shuppet":353,"banette":354,"duskull":355,"dusclops":356,"tropius":357,"chimecho":358,"absol":359,"wynaut":360,"snorunt":361,"glalie":362,"spheal":363,"sealeo":364,"walrein":365,"clamperl":366,"huntail":367,"gorebyss":368,"relicanth":369,"luvdisc":370,"bagon":371,"shelgon":372,"salamence":373,"beldum":374,"metang":375,"metagross":376,"regirock":377,"regice":378,"registeel":379,"latias":380,"latios":381,"kyogre":382,"groudon":383,"rayquaza":384,"jirachi":385,"deoxys":386,"turtwig":387,"grotle":388,"torterra":389,"chimchar":390,"monferno":391,"infernape":392,"piplup":393,"prinplup":394,"empoleon":395,"starly":396,"staravia":397,"staraptor":398,"bidoof":399,"bibarel":400,"kricketot":401,"kricketune":402,"shinx":403,"luxio":404,"luxray":405,"budew":406,"roserade":407,"cranidos":408,"rampardos":409,"shieldon":410,"bastiodon":411,"burmy":412,"wormadam":413,"mothim":414,"combee":415,"vespiquen":416,"pachirisu":417,"buizel":418,"floatzel":419,"cherubi":420,"cherrim":421,"shellos":422,"gastrodon":423,"ambipom":424,"drifloon":425,"drifblim":426,"buneary":427,"lopunny":428,"mismagius":429,"honchkrow":430,"glameow":431,"purugly":432,"chingling":433,"stunky":434,"skuntank":435,"bronzor":436,"bronzong":437,"bonsly":438,"mime jr":439,"happiny":440,"chatot":441,"spiritomb":442,"gible":443,"gabite":444,"garchomp":445,"munchlax":446,"riolu":447,"lucario":448,"hippopotas":449,"hippowdon":450,"skorupi":451,"drapion":452,"croagunk":453,"toxicroak":454,"carnivine":455,"finneon":456,"lumineon":457,"mantyke":458,"snover":459,"abomasnow":460,"weavile":461,"magnezone":462,"lickilicky":463,"rhyperior":464,"tangrowth":465,"electivire":466,"magmortar":467,"togekiss":468,"yanmega":469,"leafeon":470,"glaceon":471,"gliscor":472,"mamoswine":473,"porygon-z":474,"gallade":475,"probopass":476,"dusknoir":477,"froslass":478,"rotom":479,"uxie":480,"mesprit":481,"azelf":482,"dialga":483,"palkia":484,"heatran":485,"regigigas":486,"giratina":487,"cresselia":488,"phione":489,"manaphy":490,"darkrai":491,"shaymin":492,"arceus":493,"victini":494,"snivy":495,"servine":496,"serperior":497,"tepig":498,"pignite":499,"emboar":500,"oshawott":501,"dewott":502,"samurott":503,"patrat":504,"watchog":505,"lillipup":506,"herdier":507,"stoutland":508,"purrloin":509,"liepard":510,"pansage":511,"simisage":512,"pansear":513,"simisear":514,"panpour":515,"simipour":516,"munna":517,"musharna":518,"pidove":519,"tranquill":520,"unfezant":521,"blitzle":522,"zebstrika":523,"roggenrola":524,"boldore":525,"gigalith":526,"woobat":527,"swoobat":528,"drilbur":529,"excadrill":530,"audino":531,"timburr":532,"gurdurr":533,"conkeldurr":534,"tympole":535,"palpitoad":536,"seismitoad":537,"throh":538,"sawk":539,"sewaddle":540,"swadloon":541,"leavanny":542,"venipede":543,"whirlipede":544,"scolipede":545,"cottonee":546,"whimsicott":547,"petilil":548,"lilligant":549,"basculin":550,"sandile":551,"krokorok":552,"krookodile":553,"darumaka":554,"darmanitan":555,"maractus":556,"dwebble":557,"crustle":558,"scraggy":559,"scrafty":560,"sigilyph":561,"yamask":562,"cofagrigus":563,"tirtouga":564,"carracosta":565,"archen":566,"archeops":567,"trubbish":568,"garbodor":569,"zorua":570,"zoroark":571,"minccino":572,"cinccino":573,"gothita":574,"gothorita":575,"gothitelle":576,"solosis":577,"duosion":578,"reuniclus":579,"ducklett":580,"swanna":581,"vanillite":582,"vanillish":583,"vanilluxe":584,"deerling":585,"sawsbuck":586,"emolga":587,"karrablast":588,"escavalier":589,"foongus":590,"amoonguss":591,"frillish":592,"jellicent":593,"alomomola":594,"joltik":595,"galvantula":596,"ferroseed":597,"ferrothorn":598,"klink":599,"klang":600,"klinklang":601,"tynamo":602,"eelektrik":603,"eelektross":604,"elgyem":605,"beheeyem":606,"litwick":607,"lampent":608,"chandelure":609,"axew":610,"fraxure":611,"haxorus":612,"cubchoo":613,"beartic":614,"cryogonal":615,"shelmet":616,"accelgor":617,"stunfisk":618,"mienfoo":619,"mienshao":620,"druddigon":621,"golett":622,"golurk":623,"pawniard":624,"bisharp":625,"bouffalant":626,"rufflet":627,"braviary":628,"vullaby":629,"mandibuzz":630,"heatmor":631,"durant":632,"deino":633,"zweilous":634,"hydreigon":635,"larvesta":636,"volcarona":637,"cobalion":638,"terrakion":639,"virizion":640,"tornadus":641,"thundurus":642,"reshiram":643,"zekrom":644,"landorus":645,"kyurem":646,"keldeo":647,"meloetta":648,"genesect":649,"chespin":650,"quilladin":651,"chesnaught":652,"fennekin":653,"braixen":654,"delphox":655,"froakie":656,"frogadier":657,"greninja":658,"bunnelby":659,"diggersby":660,"fletchling":661,"fletchinder":662,"talonflame":663,"scatterbug":664,"spewpa":665,"vivillon":666,"litleo":667,"pyroar":668,"flabebe":669,"floette":670,"florges":671,"skiddo":672,"gogoat":673,"pancham":674,"pangoro":675,"furfrou":676,"espurr":677,"meowstic":678,"honedge":679,"doublade":680,"aegislash":681,"spritzee":682,"aromatisse":683,"swirlix":684,"slurpuff":685,"inkay":686,"malamar":687,"binacle":688,"barbaracle":689,"skrelp":690,"dragalge":691,"clauncher":692,"clawitzer":693,"helioptile":694,"heliolisk":695,"tyrunt":696,"tyrantrum":697,"amaura":698,"aurorus":699,"sylveon":700,"hawlucha":701,"dedenne":702,"carbink":703,"goomy":704,"sliggoo":705,"goodra":706,"klefki":707,"phantump":708,"trevenant":709,"pumpkaboo":710,"gourgeist":711,"bergmite":712,"avalugg":713,"noibat":714,"noivern":715,"xerneas":716,"yveltal":717,"zygarde":718,"diancie":719,"hoopa":720,"volcanion":721,"rowlet":722,"dartrix":723,"decidueye":724,"litten":725,"torracat":726,"incineroar":727,"popplio":728,"brionne":729,"primarina":730,"pikipek":731,"trumbeak":732,"toucannon":733,"yungoos":734,"gumshoos":735,"grubbin":736,"charjabug":737,"vikavolt":738,"crabrawler":739,"crabominable":740,"oricorio":741,"cutiefly":742,"ribombee":743,"rockruff":744,"lycanroc":745,"wishiwashi":746,"mareanie":747,"toxapex":748,"mudbray":749,"mudsdale":750,"dewpider":751,"araquanid":752,"fomantis":753,"lurantis":754,"morelull":755,"shiinotic":756,"salandit":757,"salazzle":758,"stufful":759,"bewear":760,"bounsweet":761,"steenee":762,"tsareena":763,"comfey":764,"oranguru":765,"passimian":766,"wimpod":767,"golisopod":768,"sandygast":769,"palossand":770,"pyukumuku":771,"type null":772,"silvally":773,"minior":774,"komala":775,"turtonator":776,"togedemaru":777,"mimikyu":778,"bruxish":779,"drampa":780,"dhelmise":781,"jangmo-o":782,"hakamo-o":783,"kommo-o":784,"tapu koko":785,"tapu lele":786,"tapu bulu":787,"tapu fini":788,"cosmog":789,"cosmoem":790,"solgaleo":791,"lunala":792,"nihilego":793,"buzzwole":794,"pheromosa":795,"xurkitree":796,"celesteela":797,"kartana":798,"guzzlord":799,"necrozma":800,"magearna":801,"marshadow":802,"poipole":803,"naganadel":804,"stakataka":805,"blacephalon":806,"zeraora":807,"meltan":808,"melmetal":809,"grookey":810,"thwackey":811,"rillaboom":812,"scorbunny":813,"raboot":814,"cinderace":815,"sobble":816,"drizzile":817,"inteleon":818,"skwovet":819,"greedent":820,"rookidee":821,"corvisquire":822,"corviknight":823,"blipbug":824,"dottler":825,"orbeetle":826,"nickit":827,"thievul":828,"gossifleur":829,"eldegoss":830,"wooloo":831,"dubwool":832,"chewtle":833,"drednaw":834,"yamper":835,"boltund":836,"rolycoly":837,"carkol":838,"coalossal":839,"applin":840,"flapple":841,"appletun":842,"silicobra":843,"sandaconda":844,"cramorant":845,"arrokuda":846,"barraskewda":847,"toxel":848,"toxtricity":849,"sizzlipede":850,"centiskorch":851,"clobbopus":852,"grapploct":853,"sinistea":854,"polteageist":855,"hatenna":856,"hattrem":857,"hatterene":858,"impidimp":859,"morgrem":860,"grimmsnarl":861,"obstagoon":862,"perrserker":863,"cursola":864,"sirfetchd":865,"mr rime":866,"runerigus":867,"milcery":868,"alcremie":869,"falinks":870,"pincurchin":871,"snom":872,"frosmoth":873,"stonjourner":874,"eiscue":875,"indeedee":876,"morpeko":877,"cufant":878,"copperajah":879,"dracozolt":880,"arctozolt":881,"dracovish":882,"arctovish":883,"duraludon":884,"dreepy":885,"drakloak":886,"dragapult":887,"zacian":888,"zamazenta":889,"eternatus":890,"kubfu":891,"urshifu":892,"zarude":893,"regieleki":894,"regidrago":895,"glastrier":896,"spectrier":897,"calyrex":898,"wyrdeer":899,"kleavor":900,"ursaluna":901,"basculegion":902,"sneasler":903,"overqwil":904,"enamorus":905,"sprigatito":906,"floragato":907,"meowscarada":908,"fuecoco":909,"crocalor":910,"skeledirge":911,"quaxly":912,"quaxwell":913,"quaquaval":914,"lechonk":915,"oinkologne":916,"tarountula":917,"spidops":918,"nymble":919,"lokix":920,"pawmi":921,"pawmo":922,"pawmot":923,"tandemaus":924,"maushold":925,"fidough":926,"dachsbun":927,"smoliv":928,"dolliv":929,"arboliva":930,"squawkabilly":931,"nacli":932,"naclstack":933,"garganacl":934,"charcadet":935,"armarouge":936,"ceruledge":937,"tadbulb":938,"bellibolt":939,"wattrel":940,"kilowattrel":941,"maschiff":942,"mabosstiff":943,"shroodle":944,"grafaiai":945,"bramblin":946,"brambleghast":947,"toedscool":948,"toedscruel":949,"klawf":950,"capsakid":951,"scovillain":952,"rellor":953,"rabsca":954,"flittle":955,"espathra":956,"tinkatink":957,"tinkatuff":958,"tinkaton":959,"wiglett":960,"wugtrio":961,"bombirdier":962,"finizen":963,"palafin":964,"varoom":965,"revavroom":966,"cyclizar":967,"orthworm":968,"glimmet":969,"glimmora":970,"greavard":971,"houndstone":972,"flamigo":973,"cetoddle":974,"cetitan":975,"veluza":976,"dondozo":977,"tatsugiri":978,"annihilape":979,"clodsire":980,"farigiraf":981,"dudunsparce":982,"kingambit":983,"great tusk":984,"scream tail":985,"brute bonnet":986,"flutter mane":987,"slither wing":988,"sandy shocks":989,"iron treads":990,"iron bundle":991,"iron hands":992,"iron jugulis":993,"iron moth":994,"iron thorns":995,"frigibax":996,"arctibax":997,"baxcalibur":998,"gimmighoul":999,"gholdengo":1000,"wo-chien":1001,"chien-pao":1002,"ting-lu":1003,"chi-yu":1004,"roaring moon":1005,"iron valiant":1006,"koraidon":1007,"miraidon":1008,"walking wake":1009,"iron leaves":1010,"dipplin":1011,"poltchageist":1012,"sinistcha":1013,"okidogi":1014,"munkidori":1015,"fezandipiti":1016,"ogerpon":1017,"archaludon":1018,"hydrapple":1019,"gouging fire":1020,"raging bolt":1021,"iron boulder":1022,"iron crown":1023,"terapagos":1024,"pecharunt":1025,"nidoran f":29,"nidoran m":32,"mr-mime":122,"farfetch'd":83,"sirfetch'd":865,"mr-rime":866,"tapukoko":785,"tapulele":786,"tapubulu":787,"tapufini":788,"porygonz":474,"type:null":772,"mrmime":122,"mimejr":439,"jangmoo":782,"hakamoo":783,"kommoo":784,"ho oh":250,"flabébé":669};
 
 var PS_DEX_TYPES = (function(){
@@ -10620,22 +10571,88 @@ function _psNormName(name) {
   return (name||'').toLowerCase().replace(/[^a-z0-9]/g,'').replace(/-/g,'');
 }
 
-// Get usage stats for a format (gen + format string like "gen9ou")
-var _psUsageCache = {};
-async function _psGetUsage(gen, format) {
-  const key = 'gen' + gen + format.toLowerCase().replace(/\s/g,'');
-  if (_psUsageCache[key]) return _psUsageCache[key];
+// ── SMOGON STATS LAYER ───────────────────────────────────────────────────────
+// Fetches live Smogon usage stats from smogon.com/stats with 7-day localStorage cache.
+// Returns an object keyed by Pokemon name with { usage, Moves, Items, Abilities, Spreads, Teammates, "Checks and Counters" }
+var _psSmogonMem = {}; // in-memory session cache
+var _SMOGON_TTL = 7 * 24 * 3600 * 1000;
+var _SMOGON_FMT_MAP = {
+  'ou':'ou','uu':'uu','ru':'ru','nu':'nu','pu':'pu','zu':'zu',
+  'ubers':'ubers','ag':'ag','lc':'lc',
+  'randbats':'randombattle','rand bats':'randombattle',
+  'randombattle':'randombattle','randombattles':'randombattle',
+  'monotype':'monotype','mono':'monotype',
+  'nationaldex':'nationaldex','natdex':'nationaldex'
+};
+
+async function _psGetSmogon(gen, format) {
+  const fmtRaw = (format||'OU').toLowerCase().replace(/\s/g,'');
+  const fmtKey = _SMOGON_FMT_MAP[fmtRaw] || fmtRaw;
+  const key = 'gen' + gen + fmtKey;
+  if (_psSmogonMem[key]) return _psSmogonMem[key];
+
+  // Check localStorage cache
   try {
-    const r = await fetch('https://smogonusage.netlify.app/latest/' + key + '/0.json');
-    if (!r.ok) throw new Error();
-    const d = await r.json();
-    _psUsageCache[key] = d.data || {};
-    return _psUsageCache[key];
-  } catch(e) {
-    // Fallback: return empty object, suggestions will use hardcoded tier lists
-    _psUsageCache[key] = {};
-    return {};
+    const stored = localStorage.getItem('smogon_v2_' + key);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Date.now() - parsed.ts < _SMOGON_TTL) {
+        _psSmogonMem[key] = parsed.data;
+        // Update the data-source indicator if it exists
+        _psUpdateDataBadge(parsed.month);
+        return parsed.data;
+      }
+    }
+  } catch(e) {}
+
+  // Try the last 3 months in case the current month isn't published yet
+  const now = new Date();
+  for (let i = 1; i <= 4; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const month = d.toISOString().slice(0, 7);
+    const url = `https://www.smogon.com/stats/${month}/${key}-0.json`;
+    try {
+      const r = await fetch(url, { cache: 'no-store' });
+      if (!r.ok) continue;
+      const json = await r.json();
+      const data = json.data || {};
+      if (!Object.keys(data).length) continue;
+      _psSmogonMem[key] = data;
+      try { localStorage.setItem('smogon_v2_' + key, JSON.stringify({ ts: Date.now(), data, month })); } catch(e){}
+      _psUpdateDataBadge(month);
+      return data;
+    } catch(e) { continue; }
   }
+
+  _psSmogonMem[key] = {};
+  return {};
+}
+
+function _psUpdateDataBadge(month) {
+  const el = document.getElementById('ps-data-badge');
+  if (el && month) el.textContent = 'Smogon ' + month;
+}
+
+// Build a Showdown paste from Smogon usage stats (top moves/item/ability/spread)
+function _psBuildSetFromStats(name, entry) {
+  const item = Object.entries(entry.Items || {}).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'Life Orb';
+  const ability = Object.entries(entry.Abilities || {}).sort((a,b)=>b[1]-a[1])[0]?.[0] || '';
+  const moves = Object.entries(entry.Moves || {}).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([m])=>m);
+  while (moves.length < 4) moves.push('Move ' + (moves.length + 1));
+
+  let nature = 'Jolly', evStr = '252 Atk / 4 SpD / 252 Spe';
+  const topSpread = Object.entries(entry.Spreads || {}).sort((a,b)=>b[1]-a[1])[0]?.[0];
+  if (topSpread) {
+    const colonIdx = topSpread.indexOf(':');
+    if (colonIdx !== -1) {
+      nature = topSpread.slice(0, colonIdx);
+      const nums = topSpread.slice(colonIdx + 1).split('/').map(Number);
+      const labels = ['HP','Atk','Def','SpA','SpD','Spe'];
+      const parts = nums.map((v,i) => v ? `${v} ${labels[i]}` : null).filter(Boolean);
+      if (parts.length) evStr = parts.join(' / ');
+    }
+  }
+  return `${name} @ ${item}\nAbility: ${ability}\nEVs: ${evStr}\n${nature} Nature\n${moves.map(m => '- ' + m).join('\n')}`;
 }
 
 // Type chart for coverage analysis
@@ -10783,25 +10800,46 @@ async function psFetchSuggestions(team) {
   const gen = String(team.gen || '9');
   const format = team.format || 'OU';
   const existing = team.pokemon.map(p => _psNormName(p.name));
-  const meta = _psGetMeta(gen, format);
   const slotsLeft = 6 - team.pokemon.length;
   const count = Math.min(slotsLeft + 1, 5);
-
-  // Analyze the current team
   const analysis = _psAnalyzeTeam(team);
-  const weaknessStr = analysis.weaknesses.size > 0
-    ? [...analysis.weaknesses].join(', ')
-    : null;
 
-  // Try to load Smogon sets for suggestions
-  let setsData = {};
-  try { setsData = await _psLoadData('sets/gen' + gen + format.toLowerCase().replace(/\s/g,'') + '.json'); } catch(e){}
+  // Fetch Smogon stats + curated PS sets in parallel
+  const [smogon, setsData] = await Promise.all([
+    _psGetSmogon(gen, format),
+    _psLoadData('sets/gen' + gen + format.toLowerCase().replace(/\s/g,'') + '.json').catch(()=>({}))
+  ]);
 
-  // Score and rank candidates not already on the team
-  const candidates = meta
+  const hasSmogon = Object.keys(smogon).length > 10;
+
+  // Build candidate pool: top 80 by usage from Smogon, else fall back to tier list
+  let pool;
+  if (hasSmogon) {
+    pool = Object.entries(smogon).sort((a,b) => b[1].usage - a[1].usage).slice(0,80).map(([n]) => n);
+  } else {
+    pool = _psGetMeta(gen, format);
+  }
+
+  // Score each candidate
+  const scored = pool
     .filter(name => !existing.includes(_psNormName(name)))
-    .map(name => ({ name, score: _psScoreCandidate(name, analysis) }))
-    .sort((a, b) => b.score - a.score)
+    .map(name => {
+      let score = _psScoreCandidate(name, analysis);
+      const se = smogon[name];
+      if (se) {
+        // Teammate synergy: how often this pokemon is run alongside existing team members
+        if (se.Teammates) {
+          team.pokemon.forEach(p => {
+            const affinity = se.Teammates[p.name] ?? se.Teammates[_psNormName(p.name)] ?? 0;
+            score += affinity * 15;
+          });
+        }
+        // Slight usage bonus so high-usage picks don't get buried
+        score += Math.log1p((se.usage || 0) * 100) * 0.4;
+      }
+      return { name, score };
+    })
+    .sort((a,b) => b.score - a.score)
     .map(x => x.name);
 
   const ROLES = ['Physical Sweeper','Special Sweeper','Bulky Pivot','Hazard Setter','Revenge Killer','Cleric','Wall','Wallbreaker','Speed Control'];
@@ -10820,25 +10858,21 @@ async function psFetchSuggestions(team) {
   const results = [];
   const usedRoles = new Set();
 
-  for (const name of candidates) {
+  for (const name of scored) {
     if (results.length >= count) break;
     const types = _psGetPokeTypes(name);
+    const se = smogon[name];
+    const usagePct = se ? (se.usage * 100).toFixed(1) : null;
 
-    // Pick role based on what the team needs
-    let role = ROLES[results.length % ROLES.length];
-    if (!analysis.presentRoles.has('Hazard Setter') && !usedRoles.has('Hazard Setter')) role = 'Hazard Setter';
-    else if (!analysis.presentRoles.has('Bulky Pivot') && !usedRoles.has('Bulky Pivot') && results.length > 0) role = 'Bulky Pivot';
-    else if (usedRoles.has(role)) role = ROLES.find(r => !usedRoles.has(r)) || role;
-
-    // Try Smogon set
+    // Build the moveset — prefer curated PS set, then Smogon stats, then generic
     const normKey = _psNormName(name);
-    const setEntry = setsData[normKey] || setsData[name] || null;
-    const sets = setEntry ? Object.entries(setEntry) : null;
-    let chosenSet, setName = 'Standard';
+    const setEntry = setsData[normKey] || setsData[name];
+    let chosenSet, setLabel = 'Stats-based';
+    let role = ROLES[results.length % ROLES.length];
 
-    if (sets && sets.length > 0) {
-      const [sn, sd] = sets[0];
-      setName = sn;
+    if (setEntry && Object.keys(setEntry).length) {
+      const [sn, sd] = Object.entries(setEntry)[0];
+      setLabel = sn;
       const moves = (sd.moves||[]).map(m=>Array.isArray(m)?m[0]:m).slice(0,4);
       const evStr = sd.evs ? Object.entries(sd.evs).map(([s,v])=>`${v} ${s}`).join(' / ') : '252 Atk / 4 SpD / 252 Spe';
       const nature = sd.nature || 'Jolly';
@@ -10850,38 +10884,61 @@ async function psFetchSuggestions(team) {
       else if (/hazard|lead|rock/i.test(sn)) role = 'Hazard Setter';
       else if (/band|specs|all.out/i.test(sn)) role = 'Wallbreaker';
       else if (/cleric|wish/i.test(sn)) role = 'Cleric';
+    } else if (se && (se.Moves || se.Items)) {
+      chosenSet = _psBuildSetFromStats(name, se);
+      setLabel = 'Smogon usage';
+      // Infer role from top moves
+      const topMoves = Object.keys(se.Moves||{}).slice(0,6).join(' ').toLowerCase();
+      if (/stealth rock|spikes/.test(topMoves)) role = 'Hazard Setter';
+      else if (/u-turn|volt switch|flip turn/.test(topMoves)) role = 'Bulky Pivot';
+      else if (/trick room/.test(topMoves)) role = 'Speed Control';
+      else if (/wish|heal bell|aromatherapy/.test(topMoves)) role = 'Cleric';
     } else {
       const typeHint = types[0] || 'Normal';
       const isSpecial = ['Fire','Ice','Electric','Psychic','Dragon','Fairy','Water','Grass'].includes(typeHint);
-      const defaultItem = isSpecial ? 'Choice Specs' : 'Choice Band';
-      const defaultEVs = isSpecial ? '252 SpA / 4 SpD / 252 Spe' : '252 Atk / 4 SpD / 252 Spe';
-      const defaultNature = isSpecial ? 'Timid' : 'Jolly';
-      chosenSet = `${name} @ ${defaultItem}\nAbility: —\nEVs: ${defaultEVs}\n${defaultNature} Nature\n- Move 1\n- Move 2\n- Move 3\n- Move 4`;
-      if (isSpecial) role = 'Special Sweeper'; else role = 'Physical Sweeper';
+      chosenSet = `${name} @ ${isSpecial?'Choice Specs':'Choice Band'}\nAbility: —\nEVs: ${isSpecial?'252 SpA / 4 SpD / 252 Spe':'252 Atk / 4 SpD / 252 Spe'}\n${isSpecial?'Timid':'Jolly'} Nature\n- Move 1\n- Move 2\n- Move 3\n- Move 4`;
+      role = isSpecial ? 'Special Sweeper' : 'Physical Sweeper';
     }
 
+    // Prioritise filling missing roles
+    if (!analysis.presentRoles.has('Hazard Setter') && !usedRoles.has('Hazard Setter')) role = 'Hazard Setter';
+    else if (!analysis.presentRoles.has('Bulky Pivot') && !usedRoles.has('Bulky Pivot') && results.length > 0) role = 'Bulky Pivot';
     if (usedRoles.has(role)) role = ROLES.find(r => !usedRoles.has(r)) || role;
     usedRoles.add(role);
 
-    // Build contextual reason
+    // Build the reason text
     const typesStr = types.length ? types.join('/') : 'Unknown';
     const coversWeak = types.some(t => [...analysis.weaknesses].some(wt => (_psSEMap[t]||[]).includes(wt)));
     const newType = types.some(t => !analysis.teamTypes.has(t));
-    let why;
-    if (team.pokemon.length === 0) {
-      why = `${name} (${typesStr}) is a top-tier Gen ${gen} ${format} pick and a strong team-builder anchor.`;
-    } else if (coversWeak && weaknessStr) {
-      why = `${name} (${typesStr}) addresses your team's ${weaknessStr} weakness${newType ? ' and adds new offensive coverage' : ''}. As a ${role}, it ${ROLE_DESC[role]||'fills a key gap'}.`;
-    } else if (newType) {
-      why = `${name} (${typesStr}) adds ${types.filter(t=>!analysis.teamTypes.has(t)).join('/')} coverage your team currently lacks, and as a ${role} ${ROLE_DESC[role]||'fills a key gap'}.`;
-    } else {
-      why = `${name} is a proven Gen ${gen} ${format} pick that ${ROLE_DESC[role]||'provides valuable support'}. It synergises well with your current lineup.`;
+    const weakStr = [...analysis.weaknesses].join('/');
+
+    // Find top teammate synergy with current roster
+    let synergyNote = null;
+    if (se && se.Teammates) {
+      const synPairs = team.pokemon
+        .map(p => ({ pname: p.name, val: se.Teammates[p.name] || se.Teammates[_psNormName(p.name)] || 0 }))
+        .filter(x => x.val > 0.05)
+        .sort((a,b) => b.val - a.val);
+      if (synPairs.length) synergyNote = `Commonly paired with ${synPairs[0].pname} in Gen ${gen} ${format}`;
     }
 
-    results.push({ name, types, role, why, set: chosenSet });
+    let why;
+    if (team.pokemon.length === 0) {
+      why = `${name} (${typesStr})${usagePct ? ` · ${usagePct}% usage` : ''} — top-tier Gen ${gen} ${format} anchor. ${ROLE_DESC[role]||'Strong pick'}.`;
+    } else if (coversWeak) {
+      why = `${name} (${typesStr}) covers your ${weakStr} weakness${usagePct ? ` · ${usagePct}% usage` : ''}${synergyNote ? ` · ${synergyNote}` : ''}.`;
+    } else if (synergyNote) {
+      why = `${name} (${typesStr}) · ${synergyNote}${usagePct ? ` · ${usagePct}% usage` : ''}. As a ${role}, it ${ROLE_DESC[role]||'fills a key gap'}.`;
+    } else if (newType) {
+      why = `${name} (${typesStr}) adds ${types.filter(t=>!analysis.teamTypes.has(t)).join('/')} coverage${usagePct ? ` · ${usagePct}% usage` : ''}. ${ROLE_DESC[role]||''}.`;
+    } else {
+      why = `${name} (${typesStr})${usagePct ? ` · ${usagePct}% usage` : ''} — strong Gen ${gen} ${format} pick. ${ROLE_DESC[role]||'Solid addition'}.`;
+    }
+
+    results.push({ name, types, role, why, set: chosenSet, setLabel, usage: usagePct });
   }
 
-  if (!results.length) throw new Error('No suggestions available for this format. Try changing the generation or format.');
+  if (!results.length) throw new Error('No suggestions available for this format. Try adjusting the generation or format.');
   return results;
 }
 
@@ -10935,65 +10992,82 @@ async function psFetchPokeSuggestions(team, poke, pokeIdx) {
 async function psFetchTeamCounters(team) {
   const gen = String(team.gen || '9');
   const format = team.format || 'OU';
-  const meta = _psGetMeta(gen, format);
   const roster = team.pokemon.map(p => p.name);
-
-  // Analyze team to find real weaknesses
+  const rosterNorm = roster.map(_psNormName);
   const analysis = _psAnalyzeTeam(team);
 
-  // Score each meta pokemon by how much it exploits the team
-  const scored = meta
-    .filter(n => !roster.includes(n))
-    .map(name => {
-      const types = _psGetPokeTypes(name);
-      // Count how many team weaknesses this pokemon's STAB types match
-      let threatScore = 0;
-      types.forEach(t => {
-        if (analysis.weaknesses.has(t)) threatScore += 3;
-        // Also score if its STAB hits team types SE
-        const seTargets = _psSEMap[t] || [];
-        let hits = 0;
-        team.pokemon.forEach(p => {
-          let pTypes = p.types ? p.types.split(',').map(x=>x.trim()).filter(Boolean) : _psGetPokeTypes(p.name);
-          if (pTypes.some(defType => seTargets.includes(defType))) hits++;
-        });
-        threatScore += hits;
-      });
-      return { name, types, threatScore };
-    })
-    .sort((a, b) => b.threatScore - a.threatScore)
-    .slice(0, 7);
+  const smogon = await _psGetSmogon(gen, format);
+  const hasSmogon = Object.keys(smogon).length > 10;
 
-  return scored.map(({ name, types, threatScore }, i) => {
-    const typesStr = types.join('/') || '—';
-    const severeThresh = scored[0]?.threatScore * 0.7 || 1;
-    const modThresh = scored[0]?.threatScore * 0.35 || 0;
-    const severity = threatScore >= severeThresh ? 'severe' : threatScore >= modThresh ? 'moderate' : 'mild';
+  // Aggregate counter scores across all team members using Smogon's "Checks and Counters" data
+  const counterAgg = {};
+  roster.forEach(pname => {
+    // Find the Smogon entry for this team member (try exact name then normalized)
+    const se = smogon[pname] || Object.entries(smogon).find(([k]) => _psNormName(k) === _psNormName(pname))?.[1];
+    if (!se || !se['Checks and Counters']) return;
+    Object.entries(se['Checks and Counters']).forEach(([counter, scores]) => {
+      if (rosterNorm.includes(_psNormName(counter))) return; // skip team members
+      if (!counterAgg[counter]) counterAgg[counter] = { smogonScore: 0, counters: [], usage: smogon[counter]?.usage || 0 };
+      counterAgg[counter].smogonScore += scores[0] || 0; // Smogon's check/counter score
+      counterAgg[counter].counters.push(pname);
+    });
+  });
 
-    const exploitedWeaks = types.filter(t => analysis.weaknesses.has(t));
-    const seVictims = [];
+  // Also score every meta pokemon by type coverage (fallback or supplement)
+  const metaPool = hasSmogon
+    ? Object.entries(smogon).sort((a,b)=>b[1].usage-a[1].usage).slice(0,80).map(([n])=>n)
+    : _psGetMeta(gen, format);
+
+  metaPool.filter(n => !rosterNorm.includes(_psNormName(n))).forEach(name => {
+    const types = _psGetPokeTypes(name);
+    let typeScore = 0;
     types.forEach(t => {
+      if (analysis.weaknesses.has(t)) typeScore += 3;
       const seTargets = _psSEMap[t] || [];
       team.pokemon.forEach(p => {
-        let pTypes = p.types ? p.types.split(',').map(x=>x.trim()).filter(Boolean) : _psGetPokeTypes(p.name);
-        if (pTypes.some(d => seTargets.includes(d))) seVictims.push(p.name);
+        const pTypes = p.types ? p.types.split(',').map(x=>x.trim()).filter(Boolean) : _psGetPokeTypes(p.name);
+        if (pTypes.some(d => seTargets.includes(d))) typeScore++;
       });
     });
-    const uniqueVictims = [...new Set(seVictims)];
+    if (typeScore > 0) {
+      if (!counterAgg[name]) counterAgg[name] = { smogonScore: 0, counters: [], usage: smogon[name]?.usage || 0 };
+      counterAgg[name].smogonScore += typeScore * 0.5; // weight type score lower than real counter data
+    }
+  });
 
-    const why = exploitedWeaks.length
-      ? `${name} (${typesStr}) directly exploits your team's ${exploitedWeaks.join('/')} weakness${uniqueVictims.length ? `, threatening ${uniqueVictims.slice(0,2).join(' and ')}` : ''}.`
-      : `${name} (${typesStr}) is a top Gen ${gen} ${format} threat that can pressure teams without a solid answer to its typing.`;
+  // Combine and rank: Smogon counter score + usage bonus
+  const combined = Object.entries(counterAgg)
+    .map(([name, agg]) => ({
+      name,
+      types: _psGetPokeTypes(name),
+      totalScore: agg.smogonScore + (agg.usage * 50),
+      smogonScore: agg.smogonScore,
+      counters: agg.counters,
+      usage: agg.usage
+    }))
+    .sort((a,b) => b.totalScore - a.totalScore)
+    .slice(0, 7);
+
+  if (!combined.length) return [];
+
+  const maxScore = combined[0].totalScore;
+  return combined.map(({ name, types, totalScore, smogonScore, counters, usage }) => {
+    const severity = totalScore >= maxScore * 0.7 ? 'severe' : totalScore >= maxScore * 0.35 ? 'moderate' : 'mild';
+    const typesStr = types.join('/') || '—';
+    const usagePct = usage ? `${(usage*100).toFixed(1)}% usage` : null;
+    const targetStr = counters.length >= 2 ? counters.slice(0,2).join(' and ') : counters[0] || 'your team';
+    const exploitedWeaks = types.filter(t => analysis.weaknesses.has(t));
+
+    const why = counters.length
+      ? `${name} (${typesStr}) counters ${targetStr} on your team${usagePct ? ` · ${usagePct}` : ''}.`
+      : `${name} (${typesStr}) threatens your team's type coverage${usagePct ? ` · ${usagePct}` : ''}.`;
 
     const answer = exploitedWeaks.length
-      ? `Add a ${exploitedWeaks[0]}-resistant mon or a faster revenge killer to handle ${name}.`
-      : `Use your team's fastest or strongest member to force ${name} out before it can set up.`;
+      ? `Add a ${exploitedWeaks[0]}-resistant mon or faster revenge killer to handle ${name}.`
+      : `Use priority moves or your fastest member to force ${name} out.`;
 
     return {
-      name,
-      types,
-      severity,
-      why,
+      name, types, severity, why,
       exploits: types.length ? types.map(t=>`${t} STAB`) : ['Offensive presence'],
       answer
     };
@@ -11004,19 +11078,45 @@ async function psFetchTeamCounters(team) {
 async function psFetchPokeCounters(team, poke) {
   const gen = String(team.gen || '9');
   const format = team.format || 'OU';
-  const meta = _psGetMeta(gen, format);
   const name = poke.name;
-
-  const counters = meta.filter(n => n !== name).slice(0, 7);
   const SEVERITY = ['severe','severe','moderate','moderate','moderate','mild','mild'];
 
-  return counters.map((cname, i) => ({
+  const smogon = await _psGetSmogon(gen, format);
+  const entry = smogon[name] || Object.entries(smogon).find(([k]) => _psNormName(k) === _psNormName(name))?.[1];
+
+  if (entry && entry['Checks and Counters']) {
+    const sorted = Object.entries(entry['Checks and Counters'])
+      .sort((a,b) => b[1][0] - a[1][0])
+      .slice(0, 7);
+    return sorted.map(([cname, scores], i) => {
+      const types = _psGetPokeTypes(cname);
+      const usage = smogon[cname]?.usage;
+      const usagePct = usage ? `${(usage*100).toFixed(1)}% usage` : null;
+      const koRate = scores[1] != null ? `KOs ${scores[1].toFixed(0)}%` : null;
+      const switchRate = scores[2] != null ? `forces ${scores[2].toFixed(0)}% switches` : null;
+      const stats = [koRate, switchRate, usagePct].filter(Boolean).join(' · ');
+      return {
+        name: cname,
+        types,
+        severity: SEVERITY[i] || 'mild',
+        why: `${cname} is a hard counter to ${name}${stats ? ` · ${stats}` : ''}.`,
+        exploits: types.filter(Boolean).map(t => `${t} STAB`),
+        answer: i < 2 ? null : `Lure ${cname} with a coverage move or use a teammate to remove it first.`
+      };
+    });
+  }
+
+  // Fallback: type-based from meta pool
+  const pool = Object.keys(smogon).length > 10
+    ? Object.entries(smogon).sort((a,b)=>b[1].usage-a[1].usage).slice(0,20).map(([n])=>n)
+    : _psGetMeta(gen, format);
+  return pool.filter(n => n !== name).slice(0, 7).map((cname, i) => ({
     name: cname,
-    types: ['—'],
+    types: _psGetPokeTypes(cname),
     severity: SEVERITY[i] || 'mild',
-    why: `${cname} can exploit common weaknesses in ${name}'s typing or moveset and force it out.`,
-    exploits: ['Typing advantage', 'Speed advantage','Bulk advantage'],
-    answer: i < 2 ? null : `Consider luring ${cname} with a coverage move or using a teammate to remove it first.`
+    why: `${cname} can threaten ${name} with its typing and offensive presence in Gen ${gen} ${format}.`,
+    exploits: ['Type advantage'],
+    answer: i < 2 ? null : `Lure ${cname} with a coverage move or use a teammate to remove it first.`
   }));
 }
 
@@ -11076,7 +11176,7 @@ function psShowSuggestions() {
         <div class="ps-suggest-card-body">
           <div class="ps-suggest-why">${esc(card.why)}</div>
           <div>
-            <div class="ps-suggest-set-label">Smogon Set</div>
+            <div class="ps-suggest-set-label">${esc(card.setLabel||'Smogon Set')}${card.usage ? ' · <span style="color:var(--ps);font-weight:700">'+esc(card.usage)+'% usage</span>' : ''}</div>
             <pre class="ps-suggest-set">${esc(card.set||'')}</pre>
           </div>
           <button class="ps-suggest-import-btn" onclick="psImportSuggestionIdx(${si})">
