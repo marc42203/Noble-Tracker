@@ -1583,6 +1583,9 @@ thead th:first-child{
   border-left:3px solid #22c55e;margin-top:4px
 }
 .ps-threat-answer-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#22c55e;margin-bottom:3px}
+.ps-counter-set-btn{margin-top:8px;width:100%;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:11px;padding:5px 8px;cursor:pointer;text-align:left;transition:border-color .15s,color .15s}
+.ps-counter-set-btn:hover{border-color:var(--ps);color:var(--ps)}
+.ps-counter-set-reveal{margin-top:4px}
 .ps-counters-section-hdr{
   font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
   color:var(--text3);padding:6px 0 8px;border-bottom:1px solid var(--border);margin-bottom:8px
@@ -8108,6 +8111,33 @@ function renderAnalytics(){
     window._acCarCrHr     = carEntries.slice(0,8).map(([,v])=>v.runs ? +(v.crhr/v.runs).toFixed(0) : 0);
     window._acCarCrTotals = carEntries.slice(0,8).map(([,v])=>Math.round(v.cr));
 
+    // Total distance
+    const totalDistMap = {};
+    racingRuns.forEach(r => {
+      const track = r.trackId != null ? trackLookup[r.trackId] : null;
+      if (track && track.length > 0) {
+        const unit = track.lengthUnit || 'km';
+        if (!totalDistMap[unit]) totalDistMap[unit] = 0;
+        totalDistMap[unit] += track.length;
+      }
+    });
+    const totalDistStr = Object.entries(totalDistMap).map(([u,v]) => v.toFixed(0)+' '+u).join(' / ') || '—';
+
+    // Distance by car (using per-car dist already in carMap)
+    const distCarEntries = carEntries.filter(([,d]) => d.dist > 0).slice(0,8);
+    window._acCarDistLabels = distCarEntries.map(([n]) => n);
+    window._acCarDistValues = distCarEntries.map(([,d]) => +d.dist.toFixed(1));
+    window._acCarDistUnit   = distCarEntries[0]?.[1]?.distUnit || 'km';
+
+    // Podium % by car
+    window._acCarPodLabels = carEntries.slice(0,8).map(([n]) => n);
+    window._acCarPodValues = carEntries.slice(0,8).map(([,d]) => d.runs ? +(d.pods/d.runs*100).toFixed(1) : 0);
+
+    // Races by game
+    const activeGames = RACING_GAMES.filter(g => (db.racing[g].runs||[]).length > 0);
+    window._acRacingGameLabels = activeGames;
+    window._acRacingGameCounts = activeGames.map(g => db.racing[g].runs.length);
+
     // Per-car table rows
     const carTableRows = carEntries.map(([name, d]) => {
       const photo = carPhotoMap[name];
@@ -8160,6 +8190,7 @@ function renderAnalytics(){
         ${_aStatCard('Avg Credits/Race', Math.round(avgCr).toLocaleString(), '')}
         ${_aStatCard('Avg Cr/Hr', avgCrHr>0 ? Math.round(avgCrHr).toLocaleString() : '—', '')}
         ${_aStatCard('Podium Rate', podiumRate+'%', 'top 3 finishes')}
+        ${_aStatCard('Total Distance', totalDistStr, '')}
         ${bestCarCardHtml}
         ${_aStatCard('Most Raced Track', bestTrackName, bestTrackCount ? bestTrackCount+' runs' : '')}
       </div>
@@ -8168,6 +8199,11 @@ function renderAnalytics(){
         ${window._acCarLabels.length > 1 ? `<div class="analytics-chart-card"><h4>Avg Cr/Hr by Car</h4><div class="analytics-chart-inner"><canvas id="ac-racing-car-bar"></canvas></div></div>` : ''}
         ${window._acCarLabels.length > 1 ? `<div class="analytics-chart-card"><h4>Total Credits by Car</h4><div class="analytics-chart-inner"><canvas id="ac-racing-car-credits"></canvas></div></div>` : ''}
       </div>` : ''}
+      <div class="analytics-row" style="margin-top:12px">
+        ${window._acCarDistLabels.length > 1 ? `<div class="analytics-chart-card"><h4>Distance by Car (${window._acCarDistUnit})</h4><div style="height:${Math.max(140,window._acCarDistLabels.length*28)}px"><canvas id="ac-racing-car-dist"></canvas></div></div>` : ''}
+        ${window._acCarPodLabels.length > 1 ? `<div class="analytics-chart-card"><h4>Podium % by Car</h4><div style="height:${Math.max(140,window._acCarPodLabels.length*28)}px"><canvas id="ac-racing-car-pod"></canvas></div></div>` : ''}
+        ${window._acRacingGameLabels.length > 1 ? `<div class="analytics-chart-card"><h4>Races by Game</h4><div class="analytics-chart-inner"><canvas id="ac-racing-game-donut"></canvas></div></div>` : ''}
+      </div>
       ${carEntries.length ? `<div class="analytics-section" style="margin-top:20px">
         <div class="analytics-section-title">Car Breakdown</div>
         <div class="analytics-table-wrap"><table class="analytics-table">
@@ -8215,6 +8251,41 @@ function renderAnalytics(){
     window._acPSWins = matchMonthLabels.map(m=>matchMonths[m].w);
     window._acPSLosses = matchMonthLabels.map(m=>matchMonths[m].l);
 
+    // Most used Pokémon (across all team slots)
+    const pokeCounts = {};
+    teams.forEach(t => (t.pokemon||[]).forEach(p => {
+      if (!p.name) return;
+      pokeCounts[p.name] = (pokeCounts[p.name]||0) + 1;
+    }));
+    const topPoke = Object.entries(pokeCounts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    window._acPSPokeLabels = topPoke.map(([n])=>n);
+    window._acPSPokeCounts = topPoke.map(([,v])=>v);
+
+    // Most used moves (across all team Pokémon)
+    const moveCounts = {};
+    teams.forEach(t => (t.pokemon||[]).forEach(p => {
+      (p.moves||[]).forEach(m => {
+        if (!m || /^move\s*\d+$/i.test(m) || m === '—') return;
+        moveCounts[m] = (moveCounts[m]||0) + 1;
+      });
+    }));
+    const topMoves = Object.entries(moveCounts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    window._acPSMoveLabels = topMoves.map(([n])=>n);
+    window._acPSMoveCounts = topMoves.map(([,v])=>v);
+
+    // Win/loss by format
+    const fmtStats = {};
+    allMatches.forEach(m => {
+      const fmt = m.format || 'Unknown';
+      if (!fmtStats[fmt]) fmtStats[fmt] = {w:0,l:0};
+      if (m.result==='win') fmtStats[fmt].w++;
+      else fmtStats[fmt].l++;
+    });
+    const fmtEntries = Object.entries(fmtStats).sort((a,b)=>(b[1].w+b[1].l)-(a[1].w+a[1].l));
+    window._acPSFmtLabels = fmtEntries.map(([f])=>f);
+    window._acPSFmtWins   = fmtEntries.map(([,s])=>s.w);
+    window._acPSFmtLosses = fmtEntries.map(([,s])=>s.l);
+
     // Top teams table
     const topTeamsRows = teamsWithRecord.slice(0,5).map(t =>
       `<tr>
@@ -8232,6 +8303,8 @@ function renderAnalytics(){
         ${_aStatCard('Win Rate', winRate+'%', wins+' W / '+losses+' L')}
         ${bestTeam ? _aStatCard('Best Team', bestTeam.name, bestTeam.w+'-'+bestTeam.l+' ('+Math.round(bestTeam.rate*100)+'%)') : ''}
         ${_aStatCard('Teams Built', teams.length, '')}
+        ${topPoke.length ? _aStatCard('Top Pokémon', topPoke[0][0], topPoke[0][1]+' team'+(topPoke[0][1]>1?'s':'')) : ''}
+        ${topMoves.length ? _aStatCard('Top Move', topMoves[0][0], topMoves[0][1]+' team'+(topMoves[0][1]>1?'s':'')) : ''}
       </div>
       ${teamsWithRecord.length ? `<div class="analytics-row" style="margin-top:12px">
         <div class="analytics-chart-card" style="flex:1">
@@ -8244,6 +8317,17 @@ function renderAnalytics(){
           </div>
         </div>
         ${matchMonthLabels.length ? `<div class="analytics-chart-card"><h4>Win / Loss by Month</h4><div class="analytics-chart-inner"><canvas id="ac-ps-month"></canvas></div></div>` : ''}
+      </div>` : ''}
+      ${topPoke.length ? `<div class="analytics-section" style="margin-top:20px">
+        <div class="analytics-section-title">Team Composition</div>
+        <div class="analytics-row">
+          <div class="analytics-chart-card"><h4>Most Used Pokémon</h4><div style="height:${Math.max(160,topPoke.length*28)}px"><canvas id="ac-ps-poke-bar"></canvas></div></div>
+          ${topMoves.length ? `<div class="analytics-chart-card"><h4>Most Used Moves</h4><div style="height:${Math.max(160,topMoves.length*28)}px"><canvas id="ac-ps-move-bar"></canvas></div></div>` : ''}
+        </div>
+      </div>` : ''}
+      ${fmtEntries.length > 1 ? `<div class="analytics-section" style="margin-top:20px">
+        <div class="analytics-section-title">By Format</div>
+        <div class="analytics-chart-card"><h4>Win / Loss by Format</h4><div class="analytics-chart-inner"><canvas id="ac-ps-fmt-bar"></canvas></div></div>
       </div>` : ''}
     </div>`;
   }
@@ -8481,6 +8565,96 @@ function renderAnalytics(){
           plugins: { legend: { display: true, labels: { color: tickC, font: { size: 11 } } }, tooltip: { backgroundColor: tipBg, padding: 8 } },
           scales: { x: { grid: { color: gridC }, ticks: { color: tickC, font: { size: 10 } }, stacked: false },
                     y: { grid: { color: gridC }, ticks: { color: tickC, font: { size: 10 } }, beginAtZero: true } } }
+      });
+    }
+    // PS: most used pokemon
+    const psPokeEl = document.getElementById('ac-ps-poke-bar');
+    if (psPokeEl && window._acPSPokeLabels && window._acPSPokeLabels.length) {
+      if (analyticsCharts['ac-ps-poke-bar']) analyticsCharts['ac-ps-poke-bar'].destroy();
+      analyticsCharts['ac-ps-poke-bar'] = new Chart(psPokeEl.getContext('2d'), {
+        type: 'bar',
+        data: { labels: window._acPSPokeLabels, datasets: [{ label: 'Teams', data: window._acPSPokeCounts,
+          backgroundColor: '#818cf8bb', borderColor: '#818cf8', borderWidth: 1, borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { backgroundColor: tipBg, padding: 8,
+            callbacks: { label: ctx => ctx.parsed.x + ' team' + (ctx.parsed.x > 1 ? 's' : '') } } },
+          scales: { x: { grid: { color: gridC }, ticks: { color: tickC, font: { size: 10 } }, beginAtZero: true, stepSize: 1 },
+                    y: { grid: { display: false }, ticks: { color: tickC, font: { size: 11 } } } } }
+      });
+    }
+    // PS: most used moves
+    const psMoveEl = document.getElementById('ac-ps-move-bar');
+    if (psMoveEl && window._acPSMoveLabels && window._acPSMoveLabels.length) {
+      if (analyticsCharts['ac-ps-move-bar']) analyticsCharts['ac-ps-move-bar'].destroy();
+      analyticsCharts['ac-ps-move-bar'] = new Chart(psMoveEl.getContext('2d'), {
+        type: 'bar',
+        data: { labels: window._acPSMoveLabels, datasets: [{ label: 'Pokémon', data: window._acPSMoveCounts,
+          backgroundColor: '#34d399bb', borderColor: '#34d399', borderWidth: 1, borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { backgroundColor: tipBg, padding: 8,
+            callbacks: { label: ctx => ctx.parsed.x + ' Pokémon' } } },
+          scales: { x: { grid: { color: gridC }, ticks: { color: tickC, font: { size: 10 } }, beginAtZero: true, stepSize: 1 },
+                    y: { grid: { display: false }, ticks: { color: tickC, font: { size: 11 } } } } }
+      });
+    }
+    // PS: win/loss by format
+    const psFmtEl = document.getElementById('ac-ps-fmt-bar');
+    if (psFmtEl && window._acPSFmtLabels && window._acPSFmtLabels.length) {
+      if (analyticsCharts['ac-ps-fmt-bar']) analyticsCharts['ac-ps-fmt-bar'].destroy();
+      analyticsCharts['ac-ps-fmt-bar'] = new Chart(psFmtEl.getContext('2d'), {
+        type: 'bar',
+        data: { labels: window._acPSFmtLabels, datasets: [
+          { label: 'Wins', data: window._acPSFmtWins, backgroundColor: '#22c55ebb', borderColor: '#22c55e', borderWidth: 1, borderRadius: 4 },
+          { label: 'Losses', data: window._acPSFmtLosses, backgroundColor: '#ef4444bb', borderColor: '#ef4444', borderWidth: 1, borderRadius: 4 }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: true, labels: { color: tickC, font: { size: 11 } } }, tooltip: { backgroundColor: tipBg, padding: 8 } },
+          scales: { x: { grid: { color: gridC }, ticks: { color: tickC, font: { size: 10 } } },
+                    y: { grid: { color: gridC }, ticks: { color: tickC, font: { size: 10 } }, beginAtZero: true } } }
+      });
+    }
+    // Racing: distance by car
+    const racingDistEl = document.getElementById('ac-racing-car-dist');
+    if (racingDistEl && window._acCarDistLabels && window._acCarDistLabels.length > 1) {
+      if (analyticsCharts['ac-racing-car-dist']) analyticsCharts['ac-racing-car-dist'].destroy();
+      analyticsCharts['ac-racing-car-dist'] = new Chart(racingDistEl.getContext('2d'), {
+        type: 'bar',
+        data: { labels: window._acCarDistLabels, datasets: [{ label: window._acCarDistUnit, data: window._acCarDistValues,
+          backgroundColor: '#38bdf8bb', borderColor: '#38bdf8', borderWidth: 1, borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { backgroundColor: tipBg, padding: 8,
+            callbacks: { label: ctx => ctx.parsed.x.toFixed(1) + ' ' + window._acCarDistUnit } } },
+          scales: { x: { grid: { color: gridC }, ticks: { color: tickC, font: { size: 10 } }, beginAtZero: true },
+                    y: { grid: { display: false }, ticks: { color: tickC, font: { size: 11 } } } } }
+      });
+    }
+    // Racing: podium % by car
+    const racingPodEl = document.getElementById('ac-racing-car-pod');
+    if (racingPodEl && window._acCarPodLabels && window._acCarPodLabels.length > 1) {
+      if (analyticsCharts['ac-racing-car-pod']) analyticsCharts['ac-racing-car-pod'].destroy();
+      analyticsCharts['ac-racing-car-pod'] = new Chart(racingPodEl.getContext('2d'), {
+        type: 'bar',
+        data: { labels: window._acCarPodLabels, datasets: [{ label: 'Podium %', data: window._acCarPodValues,
+          backgroundColor: '#f59e0bbb', borderColor: '#f59e0b', borderWidth: 1, borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { backgroundColor: tipBg, padding: 8,
+            callbacks: { label: ctx => ctx.parsed.x + '%' } } },
+          scales: { x: { grid: { color: gridC }, ticks: { color: tickC, font: { size: 10 } }, beginAtZero: true, max: 100 },
+                    y: { grid: { display: false }, ticks: { color: tickC, font: { size: 11 } } } } }
+      });
+    }
+    // Racing: races by game (donut)
+    const racingGameEl = document.getElementById('ac-racing-game-donut');
+    if (racingGameEl && window._acRacingGameLabels && window._acRacingGameLabels.length > 1) {
+      if (analyticsCharts['ac-racing-game-donut']) analyticsCharts['ac-racing-game-donut'].destroy();
+      const gameColors = ['#f97316','#a78bfa','#34d399','#38bdf8'];
+      analyticsCharts['ac-racing-game-donut'] = new Chart(racingGameEl.getContext('2d'), {
+        type: 'doughnut',
+        data: { labels: window._acRacingGameLabels, datasets: [{ data: window._acRacingGameCounts,
+          backgroundColor: gameColors.map(c=>c+'bb'), borderColor: gameColors, borderWidth: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: true, position: 'bottom', labels: { color: tickC, font: { size: 11 }, boxWidth: 12, padding: 8 } },
+                     tooltip: { backgroundColor: tipBg, padding: 8 } } }
       });
     }
   }, 0);
@@ -10852,15 +11026,19 @@ var PS_TYPE_CHART = {
 // Tier-appropriate meta mons by generation
 var _psTierMeta = {
   '9':{OU:['Dragonite','Gholdengo','Iron Moth','Great Tusk','Kingambit','Slowking-Galar','Roaring Moon','Ogerpon-Wellspring','Ting-Lu','Meowscarada','Dragapult','Toxapex','Hatterene','Volcarona','Zamazenta','Alomomola','Landorus-Therian','Rillaboom','Cinderace','Garchomp'],
+    Ubers:['Calyrex-Ice','Calyrex-Shadow','Eternatus','Zacian-Crowned','Zamazenta-Crowned','Koraidon','Miraidon','Kyogre','Groudon-Primal','Rayquaza','Mewtwo','Necrozma-Ultra','Arceus','Yveltal','Xerneas','Zygarde','Ho-Oh','Lugia','Dialga-Origin','Palkia-Origin'],
     UU:['Azumarill','Salamence','Scizor','Blissey','Garchomp','Gyarados','Hydreigon','Mimikyu','Thundurus'],
     NU:['Incineroar','Arcanine','Lycanroc-Dusk','Toxicroak','Silvally'],
     RandBats:['Mewtwo','Rayquaza','Groudon','Kyogre','Zacian']},
   '8':{OU:['Zamazenta','Zacian-Crowned','Landorus-Therian','Ferrothorn','Heatran','Urshifu-Rapid-Strike','Toxapex','Garchomp','Clefable','Tyranitar','Rillaboom','Weavile','Kyurem','Volcarona','Slowbro','Dragonite'],
+    Ubers:['Zacian-Crowned','Zamazenta-Crowned','Calyrex-Ice','Calyrex-Shadow','Eternatus','Kyogre','Groudon-Primal','Rayquaza','Yveltal','Xerneas','Mewtwo','Arceus','Necrozma-Ultra','Ho-Oh','Lugia'],
     UU:['Salamence','Scizor','Azumarill','Mimikyu','Lycanroc-Dusk'],
     NU:['Incineroar','Arcanine','Comfey']},
   '7':{OU:['Greninja','Landorus-Therian','Toxapex','Ferrothorn','Heatran','Mega Charizard X','Tapu Koko','Tapu Lele','Mega Mawile','Mega Lopunny','Clefable','Volcarona'],
+    Ubers:['Mega Mewtwo Y','Mega Mewtwo X','Primal Kyogre','Primal Groudon','Rayquaza','Yveltal','Xerneas','Zygarde','Arceus','Necrozma-Ultra'],
     UU:['Salamence','Scizor','Azumarill','Togekiss','Krookodile']},
   '6':{OU:['Aegislash','Mega Kangaskhan','Landorus-Therian','Mega Charizard Y','Clefable','Thundurus','Scizor','Talonflame','Rotom-Wash','Heatran'],
+    Ubers:['Mega Mewtwo Y','Mega Mewtwo X','Primal Kyogre','Primal Groudon','Rayquaza','Yveltal','Xerneas','Arceus','Mega Rayquaza'],
     UU:['Salamence','Florges','Krookodile']},
 };
 
@@ -10868,8 +11046,13 @@ function _psGetMeta(gen, format) {
   const g = String(gen);
   const tier = _psTierMeta[g] || _psTierMeta['9'];
   const fmt = format.toUpperCase().replace(/\s/g,'');
+  // Exact match first (prevents 'UBERS'.includes('UU') false positive)
   for (const key of Object.keys(tier)) {
-    if (fmt.includes(key)) return tier[key];
+    if (fmt === key.toUpperCase()) return tier[key];
+  }
+  // Partial match fallback
+  for (const key of Object.keys(tier)) {
+    if (fmt.includes(key.toUpperCase())) return tier[key];
   }
   return tier.OU || [];
 }
@@ -10903,6 +11086,29 @@ function _psGetPokeTypes(name) {
   return [];
 }
 
+// Ability-granted type immunities (normalized: lowercase, no spaces/hyphens)
+var _PS_ABILITY_IMMUNITIES = {
+  'levitate':       ['Ground'],
+  'lightningrod':   ['Electric'],
+  'voltabsorb':     ['Electric'],
+  'motordrive':     ['Electric'],
+  'waterabsorb':    ['Water'],
+  'stormdrain':     ['Water'],
+  'dryskin':        ['Water'],
+  'flashfire':      ['Fire'],
+  'sapsipper':      ['Grass'],
+  'eartheater':     ['Ground'],
+  'wellbakedbody':  ['Fire'],
+  'wonderguard':    [], // handled by only-SE rule; skip for team weakness counting
+};
+
+function _psAbilityImmune(ability, attackType) {
+  if (!ability) return false;
+  const key = ability.toLowerCase().replace(/[\s\-']/g, '');
+  const immune = _PS_ABILITY_IMMUNITIES[key];
+  return immune ? immune.includes(attackType) : false;
+}
+
 // Analyze a team: returns { weaknesses, teamTypes, presentRoles }
 function _psAnalyzeTeam(team) {
   const ALL_TYPES = ['Normal','Fire','Water','Electric','Grass','Ice','Fighting','Poison',
@@ -10920,12 +11126,13 @@ function _psAnalyzeTeam(team) {
     types.forEach(t => teamTypes.add(t));
   });
 
-  // Find types that hit 2+ team members SE (real weaknesses)
+  // Find types that hit 2+ team members SE (real weaknesses), accounting for ability immunities
   const weaknesses = new Set();
   ALL_TYPES.forEach(attType => {
     const seTargets = _psSEMap[attType] || [];
     let hits = 0;
     team.pokemon.forEach(p => {
+      if (_psAbilityImmune(p.ability, attType)) return; // ability nullifies this attack type
       let pTypes = [];
       if (p.types && p.types.trim()) {
         pTypes = p.types.split(',').map(t=>t.trim()).filter(Boolean);
@@ -11456,6 +11663,7 @@ function buildThreatCard(threat) {
       <div class="ps-threat-why">${esc(threat.why)}</div>
       ${weakHtml ? `<div class="ps-threat-weak-row"><span class="ps-threat-weak-lbl">Exploits:</span>${weakHtml}</div>` : ''}
       ${threat.answer ? `<div class="ps-threat-answer"><div class="ps-threat-answer-lbl">✓ How to handle it</div>${esc(threat.answer)}</div>` : ''}
+      <button class="ps-counter-set-btn" onclick="psToggleCounterSet(${JSON.stringify(threat.name)}, this)">≡ Suggest Set</button>
     </div>`;
   return el;
 }
@@ -11504,6 +11712,35 @@ function psShowPokeCounters(tid, pi) {
 }
 function psClosePokeCounters() {
   const m = document.getElementById('ps-poke-counters-modal'); if (m) m.style.display = 'none';
+}
+
+// ── Counter card "Suggest Set" toggle ─────────────────────────────────────────
+function psToggleCounterSet(name, btn) {
+  const body = btn.closest('.ps-threat-body');
+  const existing = body && body.querySelector('.ps-counter-set-reveal');
+  if (existing) { existing.remove(); btn.textContent = '≡ Suggest Set'; return; }
+  btn.textContent = '⟳ Loading…'; btn.disabled = true;
+  const t = psGetActive();
+  const gen = String(t?.gen || '9');
+  const format = t?.format || 'OU';
+  _psGetSmogon(gen, format).then(smogon => {
+    const entry = smogon[name] || Object.entries(smogon).find(([k]) => _psNormName(k) === _psNormName(name))?.[1];
+    let paste;
+    if (entry && (entry.Moves || entry.Items)) {
+      paste = _psBuildSetFromStats(name, entry);
+    } else {
+      const types = _psGetPokeTypes(name);
+      const isSpecial = ['Fire','Ice','Electric','Psychic','Dragon','Fairy','Water','Grass'].includes(types[0]);
+      paste = `${name} @ ${isSpecial?'Choice Specs':'Choice Band'}\nAbility: —\nEVs: ${isSpecial?'252 SpA / 4 SpD / 252 Spe':'252 Atk / 4 SpD / 252 Spe'}\n${isSpecial?'Timid':'Jolly'} Nature\n- Move 1\n- Move 2\n- Move 3\n- Move 4`;
+    }
+    const div = document.createElement('div');
+    div.className = 'ps-counter-set-reveal';
+    const pasteEsc = paste.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    div.innerHTML = `<pre class="ps-suggest-set" style="margin:6px 0 4px;font-size:10px">${pasteEsc}</pre>
+      <button class="ps-suggest-import-btn" style="width:100%;margin-top:2px" onclick="psImportSuggestion(${JSON.stringify(paste)})">✚ Add to Team</button>`;
+    body.appendChild(div);
+    btn.textContent = '✕ Hide Set'; btn.disabled = false;
+  }).catch(() => { btn.textContent = '≡ Suggest Set'; btn.disabled = false; });
 }
 
 // ── switchSubtab ───────────────────────────────────────────────────────────────
