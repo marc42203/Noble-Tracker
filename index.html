@@ -7804,6 +7804,13 @@ function cexDraw(){
 // ── ANALYTICS ─────────────────────────────────────────────────────────────
 var analyticsCharts = {};
 
+function switchAnalyticsTab(panelId) {
+  switchSubtab('analytics', panelId);
+  setTimeout(function(){
+    Object.values(analyticsCharts).forEach(function(c){ try{ if(c) c.resize(); }catch(e){} });
+  }, 30);
+}
+
 function renderAnalytics(){
   const el = document.getElementById('analytics-content');
   if(!el) return;
@@ -8005,57 +8012,83 @@ function renderAnalytics(){
       <td>${fmt1(avg(data.map(d=>d.deaths?d.kills/d.deaths:d.kills||0)))}</td>
     </tr>`;
   });
-  const tableHtml = `<div class="analytics-table-wrap">
-    <table class="analytics-table">
-      <thead><tr><th>Role</th><th>Sessions</th><th>Avg K</th><th>Avg DMG</th><th>Avg Deaths</th><th>Avg K/D</th></tr></thead>
-      <tbody>
-        ${tableRows.join('')}
-        <tr><td colspan="6" style="background:var(--surface2);color:var(--text3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;padding:6px 10px">Helldivers 2 — Factions</td></tr>
-        ${hdTableRows.join('')}
-      </tbody>
-    </table>
-  </div>`;
+  // ── Per-game bar & hero data ─────────────────────────────────────────────
+  const owBarLabels = owAll.map(r=>r.role);
+  const owBarVals   = owAll.map(r=>+avg(r.data.map(d=>d.kills||0)).toFixed(1));
+  const owDmgVals   = owAll.map(r=>+avg(r.data.map(d=>d.damage||0)).toFixed(0));
+  const owBarClrs   = owAll.map(r=>r.color);
+  const owBarBg2    = owAll.map(r=>r.color+'55');
+  const rvBarLabels = rvAll.map(r=>r.role);
+  const rvBarVals   = rvAll.map(r=>+avg(r.data.map(d=>d.kills||0)).toFixed(1));
+  const rvDmgVals   = rvAll.map(r=>+avg(r.data.map(d=>d.damage||0)).toFixed(0));
+  const rvBarClrs   = rvAll.map(r=>r.color);
+  const rvBarBg2    = rvAll.map(r=>r.color+'55');
+  const owHeroMap={}, rvHeroMap={};
+  owAll.forEach(({data,color})=>data.forEach(d=>{if(!d.char)return;if(!owHeroMap[d.char])owHeroMap[d.char]={n:0,color};owHeroMap[d.char].n++;}));
+  rvAll.forEach(({data,color})=>data.forEach(d=>{if(!d.char)return;if(!rvHeroMap[d.char])rvHeroMap[d.char]={n:0,color};rvHeroMap[d.char].n++;}));
+  const owTopH = Object.entries(owHeroMap).sort((a,b)=>b[1].n-a[1].n).slice(0,12);
+  const rvTopH = Object.entries(rvHeroMap).sort((a,b)=>b[1].n-a[1].n).slice(0,12);
 
   // ── Racing Analytics ──────────────────────────────────────────────────────
   function buildRacingSection() {
     if (!racingRuns.length) return '';
+
+    function fmtSecs(s) {
+      if (!s || s <= 0) return '—';
+      const m = Math.floor(s / 60);
+      const sec = (s % 60).toFixed(3);
+      return m ? m + ':' + sec.padStart(6,'0') : sec + 's';
+    }
+
+    // Build track lookup and car photo lookup
+    const trackLookup = {};
+    RACING_GAMES.forEach(g => (db.racing[g].tracks||[]).forEach(t => { trackLookup[t.id] = t; }));
+    const carPhotoMap = {};
+    RACING_GAMES.forEach(g => (db.racing[g].cars||[]).forEach(c => { if (c.photo && !carPhotoMap[c.name]) carPhotoMap[c.name] = c.photo; }));
+
     const totalRaces = racingRuns.length;
     const avgCr = avg(racingRuns.map(r=>r.credits||0));
     const avgCrHr = avg(racingRuns.filter(r=>r.crPerHr>0).map(r=>r.crPerHr));
     const podiums = racingRuns.filter(r=>r.position!=null&&r.position<=3).length;
     const podiumRate = totalRaces ? Math.round(podiums/totalRaces*100) : 0;
 
-    // Best car by avg credits/hr
+    // Per-car stats
     const carMap = {};
     racingRuns.forEach(r => {
       if (!r.car) return;
-      if (!carMap[r.car]) carMap[r.car] = {runs:0,cr:0,crhr:0,pods:0};
-      carMap[r.car].runs++;
-      carMap[r.car].cr += r.credits||0;
-      if (r.crPerHr>0) carMap[r.car].crhr += r.crPerHr;
-      if (r.position!=null && r.position<=3) carMap[r.car].pods++;
+      if (!carMap[r.car]) carMap[r.car] = {runs:0, cr:0, crhr:0, pods:0, dist:0, distUnit:'km'};
+      const cm = carMap[r.car];
+      cm.runs++;
+      cm.cr += r.credits||0;
+      if (r.crPerHr > 0) cm.crhr += r.crPerHr;
+      if (r.position != null && r.position <= 3) cm.pods++;
+      const track = r.trackId != null ? trackLookup[r.trackId] : null;
+      if (track && track.length > 0) { cm.dist += track.length; cm.distUnit = track.lengthUnit || 'km'; }
     });
-    const carEntries = Object.entries(carMap).sort((a,b)=>b[1].crhr-a[1].crhr);
+    const carEntries = Object.entries(carMap).sort((a,b) => b[1].crhr - a[1].crhr);
     const bestCarName = carEntries.length ? carEntries[0][0] : null;
     const bestCarData = bestCarName ? carMap[bestCarName] : null;
 
-    // Best track by run count
-    const trackRunMap = {};
+    // Per-track stats
+    const trackStats = {};
     racingRuns.forEach(r => {
-      const tid = r.trackId != null ? r.trackId : '__unknown';
-      trackRunMap[tid] = (trackRunMap[tid]||0)+1;
+      if (r.trackId == null) return;
+      if (!trackStats[r.trackId]) trackStats[r.trackId] = {runs:0, bestLap:null, bestTime:null, cr:0};
+      const ts = trackStats[r.trackId];
+      ts.runs++;
+      ts.cr += r.credits||0;
+      if (r.lapTimeSecs > 0 && (ts.bestLap === null || r.lapTimeSecs < ts.bestLap)) ts.bestLap = r.lapTimeSecs;
+      if (r.timeSecs > 0 && (ts.bestTime === null || r.timeSecs < ts.bestTime)) ts.bestTime = r.timeSecs;
     });
-    let bestTrackName = '—';
-    let bestTrackCount = 0;
-    Object.entries(trackRunMap).sort((a,b)=>b[1]-a[1]).forEach(([tid, count]) => {
-      if (count > bestTrackCount) {
-        bestTrackCount = count;
-        if (tid === '__unknown') { bestTrackName = 'Unknown Track'; return; }
-        const tidNum = parseInt(tid);
-        RACING_GAMES.forEach(g => {
-          const t = (db.racing[g].tracks||[]).find(x=>x.id===tidNum);
-          if (t) bestTrackName = t.name;
-        });
+    const trackEntries = Object.entries(trackStats).sort((a,b) => b[1].runs - a[1].runs).slice(0,10);
+
+    // Best track by run count
+    let bestTrackName = '—', bestTrackCount = 0;
+    trackEntries.forEach(([tid, ts]) => {
+      if (ts.runs > bestTrackCount) {
+        bestTrackCount = ts.runs;
+        const t = trackLookup[parseInt(tid)];
+        bestTrackName = t ? t.name : 'Unknown Track';
       }
     });
 
@@ -8063,31 +8096,91 @@ function renderAnalytics(){
     const crMonths = {};
     racingRuns.filter(r=>r.date).forEach(r => {
       const m = r.date.slice(0,7);
-      if (!crMonths[m]) crMonths[m] = {cr:0,count:0};
-      crMonths[m].cr += r.credits||0;
-      crMonths[m].count++;
+      if (!crMonths[m]) crMonths[m] = 0;
+      crMonths[m] += r.credits||0;
     });
     const crMonthLabels = Object.keys(crMonths).sort();
-    const crMonthValues = crMonthLabels.map(m=>Math.round(crMonths[m].cr));
+    const crMonthValues = crMonthLabels.map(m => Math.round(crMonths[m]));
 
     window._acRacingMonthLabels = crMonthLabels;
     window._acRacingMonthValues = crMonthValues;
-    window._acCarLabels = carEntries.slice(0,8).map(([n])=>n);
-    window._acCarCrHr = carEntries.slice(0,8).map(([,v])=>v.runs?+(v.crhr/v.runs).toFixed(0):0);
+    window._acCarLabels   = carEntries.slice(0,8).map(([n])=>n);
+    window._acCarCrHr     = carEntries.slice(0,8).map(([,v])=>v.runs ? +(v.crhr/v.runs).toFixed(0) : 0);
+    window._acCarCrTotals = carEntries.slice(0,8).map(([,v])=>Math.round(v.cr));
+
+    // Per-car table rows
+    const carTableRows = carEntries.map(([name, d]) => {
+      const photo = carPhotoMap[name];
+      const photoHtml = photo
+        ? `<img src="${photo}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--border);display:block">`
+        : `<span style="font-size:20px;line-height:36px">🚗</span>`;
+      const distStr = d.dist > 0 ? d.dist.toFixed(1) + ' ' + d.distUnit : '—';
+      const podPct  = d.runs ? Math.round(d.pods / d.runs * 100) + '%' : '—';
+      const avgCrHrStr = d.runs ? Math.round(d.crhr / d.runs).toLocaleString() : '—';
+      return `<tr>
+        <td style="width:44px;padding:6px 8px">${photoHtml}</td>
+        <td style="font-weight:600">${esc(name)}</td>
+        <td>${d.runs}</td>
+        <td>${Math.round(d.cr).toLocaleString()}</td>
+        <td>${avgCrHrStr}</td>
+        <td>${distStr}</td>
+        <td>${podPct}</td>
+      </tr>`;
+    }).join('');
+
+    // Track times table rows
+    const trackTableRows = trackEntries.map(([tid, ts]) => {
+      const track = trackLookup[parseInt(tid)];
+      const name = track ? track.name : 'Unknown Track';
+      const avgCrStr = ts.runs ? Math.round(ts.cr / ts.runs).toLocaleString() : '—';
+      return `<tr>
+        <td style="font-weight:600">${esc(name)}</td>
+        <td>${ts.runs}</td>
+        <td>${fmtSecs(ts.bestLap)}</td>
+        <td>${fmtSecs(ts.bestTime)}</td>
+        <td>${avgCrStr}</td>
+      </tr>`;
+    }).join('');
+
+    // Best car stat card with photo
+    const bestCarPhotoHtml = bestCarName && carPhotoMap[bestCarName]
+      ? `<img src="${carPhotoMap[bestCarName]}" style="height:32px;border-radius:5px;object-fit:cover;margin-bottom:4px;border:1px solid var(--border)">`
+      : '';
+    const bestCarCardHtml = bestCarName ? `<div class="analytics-stat-card">
+      <div class="analytics-stat-label">Best Car</div>
+      ${bestCarPhotoHtml}
+      <div class="analytics-stat-val" style="font-size:13px">${esc(bestCarName)}</div>
+      ${bestCarData ? `<div class="analytics-stat-sub">${Math.round(bestCarData.crhr/bestCarData.runs||0).toLocaleString()} avg cr/hr</div>` : ''}
+    </div>` : '';
 
     return `<div class="analytics-section">
       <div class="analytics-section-title">Racing</div>
       <div class="analytics-stat-grid">
         ${_aStatCard('Total Races', totalRaces, '')}
         ${_aStatCard('Avg Credits/Race', Math.round(avgCr).toLocaleString(), '')}
-        ${_aStatCard('Avg Cr/Hr', avgCrHr>0?Math.round(avgCrHr).toLocaleString():'—', '')}
+        ${_aStatCard('Avg Cr/Hr', avgCrHr>0 ? Math.round(avgCrHr).toLocaleString() : '—', '')}
         ${_aStatCard('Podium Rate', podiumRate+'%', 'top 3 finishes')}
-        ${bestCarName ? _aStatCard('Best Car', bestCarName, bestCarData ? Math.round(bestCarData.crhr/bestCarData.runs||0).toLocaleString()+' avg cr/hr' : '') : ''}
+        ${bestCarCardHtml}
         ${_aStatCard('Most Raced Track', bestTrackName, bestTrackCount ? bestTrackCount+' runs' : '')}
       </div>
       ${crMonthLabels.length ? `<div class="analytics-row" style="margin-top:12px">
         <div class="analytics-chart-card"><h4>Credits Earned by Month</h4><div class="analytics-chart-inner"><canvas id="ac-racing-cr-month"></canvas></div></div>
         ${window._acCarLabels.length > 1 ? `<div class="analytics-chart-card"><h4>Avg Cr/Hr by Car</h4><div class="analytics-chart-inner"><canvas id="ac-racing-car-bar"></canvas></div></div>` : ''}
+        ${window._acCarLabels.length > 1 ? `<div class="analytics-chart-card"><h4>Total Credits by Car</h4><div class="analytics-chart-inner"><canvas id="ac-racing-car-credits"></canvas></div></div>` : ''}
+      </div>` : ''}
+      ${carEntries.length ? `<div class="analytics-section" style="margin-top:20px">
+        <div class="analytics-section-title">Car Breakdown</div>
+        <div class="analytics-table-wrap"><table class="analytics-table">
+          <thead><tr><th></th><th>Car</th><th>Races</th><th>Total Credits</th><th>Avg Cr/Hr</th><th>Distance</th><th>Podium %</th></tr></thead>
+          <tbody>${carTableRows}</tbody>
+        </table></div>
+      </div>` : ''}
+      ${trackEntries.length ? `<div class="analytics-section" style="margin-top:20px">
+        <div class="analytics-section-title">Track Times</div>
+        <div class="analytics-table-wrap"><table class="analytics-table">
+          <thead><tr><th>Track</th><th>Runs</th><th>Best Lap</th><th>Best Race</th><th>Avg Credits</th></tr></thead>
+          <tbody>${trackTableRows}</tbody>
+        </table></div>
       </div>` : ''}
     </div>`;
   }
@@ -8158,46 +8251,99 @@ function renderAnalytics(){
   const racingSection = buildRacingSection();
   const psSection = buildPSSection();
 
-  // ── Assemble ───────────────────────────────────────────────────────────
+  // ── Assemble with sub-tabs ─────────────────────────────────────────────
+  const hasRacing = !!racingSection;
+  const hasPS     = !!psSection;
+
   el.innerHTML = `
-    <div class="analytics-section">
-      <div class="analytics-section-title">Overview</div>
-      ${summaryHtml}
+    <div class="subtab-bar" data-group="analytics">
+      <button class="subtab-btn active" data-panel="ac-overview" onclick="switchAnalyticsTab('ac-overview')">📊 Overview</button>
+      <button class="subtab-btn" data-panel="ac-ow" onclick="switchAnalyticsTab('ac-ow')">Overwatch</button>
+      <button class="subtab-btn" data-panel="ac-rv" onclick="switchAnalyticsTab('ac-rv')">Marvel Rivals</button>
+      <button class="subtab-btn" data-panel="ac-hd" onclick="switchAnalyticsTab('ac-hd')">Helldivers 2</button>
+      ${hasRacing ? `<button class="subtab-btn" data-panel="ac-racing" onclick="switchAnalyticsTab('ac-racing')">🏎 Racing</button>` : ''}
+      ${hasPS ? `<button class="subtab-btn" data-panel="ac-ps" onclick="switchAnalyticsTab('ac-ps')">🎮 Pokémon</button>` : ''}
     </div>
-    ${owChartsHtml}
-    ${rvChartsHtml}
-    ${hdChartsHtml}
-    <div class="analytics-section">
-      <div class="analytics-section-title">Role Distribution</div>
-      <div class="analytics-donut-wrap">${owDonut}${rvDonut}${hdDonut}</div>
+
+    <div id="ac-overview" class="subtab-panel active" data-group="analytics">
+      <div class="analytics-section">
+        <div class="analytics-section-title">Overview</div>
+        ${summaryHtml}
+      </div>
+      <div class="analytics-section">
+        <div class="analytics-section-title">Sessions Over Time</div>
+        <div class="analytics-chart-card"><div class="analytics-chart-inner"><canvas id="ac-sessions-month"></canvas></div></div>
+      </div>
+      ${allSorted.length ? `<div class="analytics-section">
+        <div class="analytics-section-title">Performance Trend <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);font-size:10px">${ROLL}-session rolling avg</span></div>
+        <div class="analytics-row">
+          <div class="analytics-chart-card"><h4>Kills Trend</h4><div class="analytics-chart-inner"><canvas id="ac-trend-kills"></canvas></div></div>
+          <div class="analytics-chart-card"><h4>Damage Trend</h4><div class="analytics-chart-inner"><canvas id="ac-trend-damage"></canvas></div></div>
+          <div class="analytics-chart-card"><h4>K/D Trend</h4><div class="analytics-chart-inner"><canvas id="ac-trend-kd"></canvas></div></div>
+        </div>
+      </div>` : ''}
+      ${buildCharFocusSection()}
     </div>
-    <div class="analytics-section">
-      <div class="analytics-section-title">Performance by Role</div>
-      <div class="analytics-row">${barCardHtml}${dmgBarCard}</div>
-    </div>
-    <div class="analytics-section">
-      <div class="analytics-section-title">Performance Trend <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);font-size:10px">${ROLL}-session rolling avg</span></div>
-      <div class="analytics-row">
-        <div class="analytics-chart-card"><h4>Kills Trend</h4><div class="analytics-chart-inner"><canvas id="ac-trend-kills"></canvas></div></div>
-        <div class="analytics-chart-card"><h4>Damage Trend</h4><div class="analytics-chart-inner"><canvas id="ac-trend-damage"></canvas></div></div>
-        <div class="analytics-chart-card"><h4>K/D Trend</h4><div class="analytics-chart-inner"><canvas id="ac-trend-kd"></canvas></div></div>
+
+    <div id="ac-ow" class="subtab-panel" data-group="analytics">
+      ${owChartsHtml}
+      <div class="analytics-section">
+        <div class="analytics-section-title">Role Distribution &amp; Performance</div>
+        <div class="analytics-row">
+          ${owDonut}
+          <div class="analytics-chart-card"><h4>Avg Kills by Role</h4><div class="analytics-chart-inner"><canvas id="ac-ow-kills-bar"></canvas></div></div>
+          <div class="analytics-chart-card"><h4>Avg Damage by Role</h4><div class="analytics-chart-inner"><canvas id="ac-ow-dmg-bar"></canvas></div></div>
+        </div>
+      </div>
+      ${owTopH.length ? `<div class="analytics-section">
+        <div class="analytics-section-title">Most Played Heroes</div>
+        <div class="analytics-chart-card"><div style="height:${Math.max(160,owTopH.length*28)}px"><canvas id="ac-ow-hero-bar"></canvas></div></div>
+      </div>` : ''}
+      <div class="analytics-section">
+        <div class="analytics-section-title">All-Role Summary</div>
+        <div class="analytics-table-wrap"><table class="analytics-table">
+          <thead><tr><th>Role</th><th>Sessions</th><th>Avg K</th><th>Avg DMG</th><th>Avg Deaths</th><th>Avg K/D</th></tr></thead>
+          <tbody>${tableRows.slice(0,owAll.length).join('')}</tbody>
+        </table></div>
       </div>
     </div>
-    <div class="analytics-section">
-      <div class="analytics-section-title">Sessions Over Time</div>
-      <div class="analytics-chart-card"><div class="analytics-chart-inner"><canvas id="ac-sessions-month"></canvas></div></div>
+
+    <div id="ac-rv" class="subtab-panel" data-group="analytics">
+      ${rvChartsHtml}
+      <div class="analytics-section">
+        <div class="analytics-section-title">Role Distribution &amp; Performance</div>
+        <div class="analytics-row">
+          ${rvDonut}
+          <div class="analytics-chart-card"><h4>Avg Kills by Role</h4><div class="analytics-chart-inner"><canvas id="ac-rv-kills-bar"></canvas></div></div>
+          <div class="analytics-chart-card"><h4>Avg Damage by Role</h4><div class="analytics-chart-inner"><canvas id="ac-rv-dmg-bar"></canvas></div></div>
+        </div>
+      </div>
+      ${rvTopH.length ? `<div class="analytics-section">
+        <div class="analytics-section-title">Most Played Heroes</div>
+        <div class="analytics-chart-card"><div style="height:${Math.max(160,rvTopH.length*28)}px"><canvas id="ac-rv-hero-bar"></canvas></div></div>
+      </div>` : ''}
+      <div class="analytics-section">
+        <div class="analytics-section-title">All-Role Summary</div>
+        <div class="analytics-table-wrap"><table class="analytics-table">
+          <thead><tr><th>Role</th><th>Sessions</th><th>Avg K</th><th>Avg DMG</th><th>Avg Deaths</th><th>Avg K/D</th></tr></thead>
+          <tbody>${tableRows.slice(owAll.length).join('')}</tbody>
+        </table></div>
+      </div>
     </div>
-    <div class="analytics-section">
-      <div class="analytics-section-title">Most Played Heroes</div>
-      <div class="analytics-chart-card"><div style="height:${Math.max(160,topHeroes.length*28)}px"><canvas id="ac-hero-bar"></canvas></div></div>
+
+    <div id="ac-hd" class="subtab-panel" data-group="analytics">
+      ${hdChartsHtml}
+      <div class="analytics-section">
+        <div class="analytics-section-title">All-Role Summary</div>
+        <div class="analytics-table-wrap"><table class="analytics-table">
+          <thead><tr><th>Role</th><th>Sessions</th><th>Avg K</th><th>Avg DMG</th><th>Avg Deaths</th><th>Avg K/D</th></tr></thead>
+          <tbody>${hdTableRows.join('')}</tbody>
+        </table></div>
+      </div>
     </div>
-    ${buildCharFocusSection()}
-    <div class="analytics-section">
-      <div class="analytics-section-title">All-Role Summary</div>
-      ${tableHtml}
-    </div>
-    ${racingSection}
-    ${psSection}
+
+    ${hasRacing ? `<div id="ac-racing" class="subtab-panel" data-group="analytics">${racingSection}</div>` : ''}
+    ${hasPS ? `<div id="ac-ps" class="subtab-panel" data-group="analytics">${psSection}</div>` : ''}
   `;
 
   // Draw all charts
@@ -8207,12 +8353,18 @@ function renderAnalytics(){
     const tickC = isLight?'#888':'#5a5a70';
     const tipBg = isLight?'#ffffff':'#1a1a24';
 
-    _drawAnalyticsBar('ac-kills-bar', barLabels, barValues, barColors, barBg, 'Avg Kills');
-    _drawAnalyticsBar('ac-damage-bar', barLabels, dmgBarValues, barColors, barBg, 'Avg Damage');
-    _drawAnalyticsDonut('ac-overwatch-donut', owAll.map(r=>r.data.length), owAll.map(r=>r.role), owAll.map(r=>r.color));
-    _drawAnalyticsDonut('ac-marvel-rivals-donut', rvAll.map(r=>r.data.length), rvAll.map(r=>r.role), rvAll.map(r=>r.color));
+    // Per-game role bars
+    _drawAnalyticsBar('ac-ow-kills-bar', owBarLabels, owBarVals,  owBarClrs, owBarBg2, 'Avg Kills');
+    _drawAnalyticsBar('ac-ow-dmg-bar',   owBarLabels, owDmgVals,  owBarClrs, owBarBg2, 'Avg Damage');
+    _drawAnalyticsBar('ac-rv-kills-bar', rvBarLabels, rvBarVals,  rvBarClrs, rvBarBg2, 'Avg Kills');
+    _drawAnalyticsBar('ac-rv-dmg-bar',   rvBarLabels, rvDmgVals,  rvBarClrs, rvBarBg2, 'Avg Damage');
+
+    // Per-game donuts
+    _drawAnalyticsDonut('ac-overwatch-donut',    owAll.map(r=>r.data.length), owAll.map(r=>r.role), owAll.map(r=>r.color));
+    _drawAnalyticsDonut('ac-marvel-rivals-donut',rvAll.map(r=>r.data.length), rvAll.map(r=>r.role), rvAll.map(r=>r.color));
     _drawAnalyticsDonut('ac-helldivers-2-donut', hdAll.map(r=>r.data.length), hdAll.map(r=>r.role), hdAll.map(r=>r.color));
-    _drawAnalyticsDonut('ac-hd-faction-donut', hdAll.map(r=>r.data.length), hdAll.map(r=>r.role), hdAll.map(r=>r.color));
+    _drawAnalyticsDonut('ac-hd-faction-donut',   hdAll.map(r=>r.data.length), hdAll.map(r=>r.role), hdAll.map(r=>r.color));
+
     // Restore character focus state
     cfSetGame(charFocusState.g);
     if(charFocusState.name){
@@ -8255,20 +8407,24 @@ function renderAnalytics(){
       });
     }
 
-    // Most played heroes (horizontal bar)
-    const heroEl = document.getElementById('ac-hero-bar');
-    if(heroEl && heroBarLabels.length){
-      if(analyticsCharts['ac-hero-bar']) analyticsCharts['ac-hero-bar'].destroy();
-      analyticsCharts['ac-hero-bar'] = new Chart(heroEl.getContext('2d'),{
+    // Per-game hero bars
+    function drawHeroBar(canvasId, heroes){
+      const el = document.getElementById(canvasId); if(!el||!heroes.length) return;
+      if(analyticsCharts[canvasId]) analyticsCharts[canvasId].destroy();
+      analyticsCharts[canvasId] = new Chart(el.getContext('2d'),{
         type:'bar',
-        data:{labels:heroBarLabels, datasets:[{label:'Sessions', data:heroBarValues,
-          backgroundColor:heroBarColors, borderColor:heroBarBorders, borderWidth:1, borderRadius:4}]},
+        data:{labels:heroes.map(([h])=>h), datasets:[{label:'Sessions',
+          data:heroes.map(([,v])=>v.n), backgroundColor:heroes.map(([,v])=>v.color+'bb'),
+          borderColor:heroes.map(([,v])=>v.color), borderWidth:1, borderRadius:4}]},
         options:{indexAxis:'y', responsive:true, maintainAspectRatio:false,
           plugins:{legend:{display:false}, tooltip:{backgroundColor:tipBg, padding:8}},
           scales:{x:{grid:{color:gridC}, ticks:{color:tickC,font:{size:10}}, beginAtZero:true},
                   y:{grid:{display:false}, ticks:{color:tickC,font:{size:11}}}}}
       });
     }
+    drawHeroBar('ac-ow-hero-bar', owTopH);
+    drawHeroBar('ac-rv-hero-bar', rvTopH);
+
     // Racing: credits by month
     const racingCrEl = document.getElementById('ac-racing-cr-month');
     if (racingCrEl && window._acRacingMonthLabels && window._acRacingMonthLabels.length) {
@@ -8291,6 +8447,20 @@ function renderAnalytics(){
         type: 'bar',
         data: { labels: window._acCarLabels, datasets: [{ label: 'Avg Cr/Hr', data: window._acCarCrHr,
           backgroundColor: '#10b981bb', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { backgroundColor: tipBg, padding: 8 } },
+          scales: { x: { grid: { color: gridC }, ticks: { color: tickC, font: { size: 10 } }, beginAtZero: true },
+                    y: { grid: { display: false }, ticks: { color: tickC, font: { size: 11 } } } } }
+      });
+    }
+    // Racing: total credits by car
+    const racingCarCrEl = document.getElementById('ac-racing-car-credits');
+    if (racingCarCrEl && window._acCarLabels && window._acCarLabels.length > 1) {
+      if (analyticsCharts['ac-racing-car-credits']) analyticsCharts['ac-racing-car-credits'].destroy();
+      analyticsCharts['ac-racing-car-credits'] = new Chart(racingCarCrEl.getContext('2d'), {
+        type: 'bar',
+        data: { labels: window._acCarLabels, datasets: [{ label: 'Total Credits', data: window._acCarCrTotals,
+          backgroundColor: '#f59e0bbb', borderColor: '#f59e0b', borderWidth: 1, borderRadius: 4 }] },
         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false }, tooltip: { backgroundColor: tipBg, padding: 8 } },
           scales: { x: { grid: { color: gridC }, ticks: { color: tickC, font: { size: 10 } }, beginAtZero: true },
@@ -10535,7 +10705,9 @@ function psExportTeam() {
 // ── Init: hook into banner init ───────────────────────────────
 function initPS() {
   psTeams = psLoad();
+  if (psTeams.length && !psActiveId) psActiveId = psTeams[0].id;
   psRenderSidebar();
+  if (psActiveId) psRenderDetail();
   // Set sprites
   const psBanSp  = document.getElementById('ps_banner_img');
   const psLogoSp = document.getElementById('ps_logo_img');
