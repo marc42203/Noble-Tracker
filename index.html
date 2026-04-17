@@ -11714,6 +11714,88 @@ function psClosePokeCounters() {
   const m = document.getElementById('ps-poke-counters-modal'); if (m) m.style.display = 'none';
 }
 
+// ── Per-poke set suggestions ───────────────────────────────────────────────────
+async function psShowPokeSuggest(tid, pi) {
+  const t = psTeams.find(x => x.id === tid);
+  if (!t || !t.pokemon[pi]) return;
+  const p = t.pokemon[pi];
+  const gen = String(t.gen || '9');
+  const format = t.format || 'OU';
+
+  const modal   = document.getElementById('ps-poke-suggest-modal');
+  const title   = document.getElementById('ps-poke-suggest-title');
+  const sprite  = document.getElementById('ps-poke-suggest-sprite');
+  const ctx     = document.getElementById('ps-poke-suggest-context');
+  const results = document.getElementById('ps-poke-suggest-results');
+  const loading = document.getElementById('ps-poke-suggest-loading');
+  if (!modal||!ctx||!results||!loading) return;
+
+  if (title) title.textContent = p.name + ' — Set Suggestions';
+  if (sprite) sprite.src = psSpriteURL(p.name);
+  ctx.innerHTML = `
+    <span class="ps-suggest-context-chip">Gen ${gen}</span>
+    <span class="ps-suggest-context-chip">${format}</span>
+    <span class="ps-suggest-context-chip">${esc(p.name)}</span>
+  `;
+  results.innerHTML = '';
+  loading.style.display = 'flex';
+  modal.style.display = 'flex';
+
+  try {
+    const [smogon, setsData] = await Promise.all([
+      _psGetSmogon(gen, format),
+      _psLoadData('sets/gen' + gen + format.toLowerCase().replace(/\s/g,'') + '.json').catch(() => ({}))
+    ]);
+
+    loading.style.display = 'none';
+    const cards = [];
+
+    // Curated sets first
+    const normKey = _psNormName(p.name);
+    const setEntry = setsData[normKey] || setsData[p.name];
+    if (setEntry && Object.keys(setEntry).length) {
+      Object.entries(setEntry).forEach(([sn, sd]) => {
+        const moves = (sd.moves||[]).map(m => Array.isArray(m) ? m[0] : m).slice(0,4);
+        const evStr = sd.evs ? Object.entries(sd.evs).map(([s,v]) => `${v} ${s}`).join(' / ') : '252 Atk / 4 SpD / 252 Spe';
+        const nature = sd.nature || 'Jolly';
+        const item = Array.isArray(sd.item) ? sd.item[0] : (sd.item || 'Life Orb');
+        const ability = Array.isArray(sd.ability) ? sd.ability[0] : (sd.ability || '');
+        const paste = `${p.name} @ ${item}\nAbility: ${ability}\nEVs: ${evStr}\n${nature} Nature\n${moves.map(m => '- ' + m).join('\n')}`;
+        cards.push({ label: sn, paste, usage: null });
+      });
+    }
+
+    // Stats-based Smogon set
+    const entry = smogon[p.name] || Object.entries(smogon).find(([k]) => _psNormName(k) === normKey)?.[1];
+    if (entry && (entry.Moves || entry.Items)) {
+      const paste = _psBuildSetFromStats(p.name, entry);
+      const usagePct = entry.usage ? (entry.usage * 100).toFixed(1) + '% usage' : null;
+      cards.push({ label: 'Smogon Stats', paste, usage: usagePct });
+    }
+
+    if (!cards.length) {
+      results.innerHTML = '<div class="ps-suggest-empty">No Smogon data found for this Pokémon in this tier.</div>';
+      return;
+    }
+
+    cards.forEach(card => {
+      const el = document.createElement('div');
+      el.className = 'ps-suggest-card';
+      const pasteEsc = card.paste.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      el.innerHTML = `
+        <div class="ps-suggest-card-body" style="padding:12px 14px">
+          <div class="ps-suggest-set-label">${esc(card.label)}${card.usage ? ' · <span style="color:var(--ps);font-weight:700">' + esc(card.usage) + '</span>' : ''}</div>
+          <pre class="ps-suggest-set">${pasteEsc}</pre>
+          <button class="ps-suggest-import-btn" style="margin-top:6px" onclick="psImportSuggestion(${JSON.stringify(card.paste)})">✚ Add to Team</button>
+        </div>`;
+      results.appendChild(el);
+    });
+  } catch(err) {
+    loading.style.display = 'none';
+    results.innerHTML = `<div class="ps-suggest-error">Error: ${esc(err.message)}</div>`;
+  }
+}
+
 // ── Counter card "Suggest Set" toggle ─────────────────────────────────────────
 function psToggleCounterSet(name, btn) {
   const body = btn.closest('.ps-threat-body');
