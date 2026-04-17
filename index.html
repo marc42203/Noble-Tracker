@@ -744,6 +744,8 @@ tbody td{padding:11px 14px;font-size:14px;white-space:nowrap}
 .track-sel-row select:focus{border-color:var(--racing);box-shadow:0 0 0 3px var(--racing-soft)}
 .btn-new-track{background:var(--racing);color:#000;border:none;border-radius:var(--rs);padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .15s}
 .btn-new-track:hover{opacity:.85}
+.racing-filter-bar{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surface2);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.racing-filter-bar select,.racing-filter-bar input{background:var(--surface);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:5px 8px;font-size:12px}
 .track-section-hdr{display:flex;align-items:center;gap:10px;padding:8px 0 4px;border-bottom:1px solid var(--border);margin-bottom:6px;cursor:pointer;user-select:none}
 .track-section-hdr h4{margin:0;font-size:13px;font-weight:700;color:var(--racing);flex:1}
 .track-section-meta{font-size:11px;color:var(--text3)}
@@ -3559,6 +3561,20 @@ Jolly Nature
 <div class="panel" id="panel-racing">
   <div class="panel-logo-bar" style="font-size:clamp(32px,5vw,64px);padding:24px 0 10px">🏎️</div>
   <div class="panel-banner" id="banner-racing"><img src="/sprites/banner_racing.png" style="width:100%;height:100%;object-fit:cover;object-position:center center"></div>
+  <div class="racing-filter-bar" id="racing-filter-bar">
+    <select id="rf-game" onchange="applyRacingFilter()" style="flex:1;min-width:120px">
+      <option value="">All Games</option>
+      <option value="Forza Horizon">Forza Horizon</option>
+      <option value="Forza Motorsport">Forza Motorsport</option>
+      <option value="The Crew 2">The Crew 2</option>
+      <option value="The Crew Motorfest">The Crew Motorfest</option>
+    </select>
+    <select id="rf-track" onchange="applyRacingFilter()" style="flex:1;min-width:120px">
+      <option value="">All Tracks</option>
+    </select>
+    <input id="rf-car" type="text" placeholder="Filter by car…" oninput="applyRacingFilter()" style="flex:1;min-width:120px">
+    <button onclick="clearRacingFilter()" style="background:none;border:1px solid var(--border2);border-radius:6px;color:var(--text3);padding:5px 10px;cursor:pointer;font-size:12px;white-space:nowrap">✕ Clear</button>
+  </div>
   <div id="rp-racing-Forza-Horizon" class="role-section"></div>
   <div id="rp-racing-Forza-Motorsport" class="role-section"></div>
   <div id="rp-racing-The-Crew-2" class="role-section"></div>
@@ -5967,15 +5983,60 @@ function applyCarSel(){
   document.getElementById('racing-cartype').value = car.cls||'';
 }
 
+var _racingFilter = {game:'', track:'', car:''};
+
+function applyRacingFilter() {
+  _racingFilter.game  = (document.getElementById('rf-game')||{}).value  || '';
+  _racingFilter.track = (document.getElementById('rf-track')||{}).value || '';
+  _racingFilter.car   = ((document.getElementById('rf-car')||{}).value  || '').toLowerCase().trim();
+  renderRacing();
+}
+
+function clearRacingFilter() {
+  const g = document.getElementById('rf-game');
+  const t = document.getElementById('rf-track');
+  const c = document.getElementById('rf-car');
+  if (g) g.value = '';
+  if (t) t.value = '';
+  if (c) c.value = '';
+  _racingFilter = {game:'', track:'', car:''};
+  renderRacing();
+}
+
+function _populateRacingFilterTracks() {
+  const sel = document.getElementById('rf-track');
+  if (!sel) return;
+  const cur = sel.value;
+  const seen = new Set();
+  const opts = ['<option value="">All Tracks</option>'];
+  RACING_GAMES.forEach(g => {
+    (db.racing[g]?.tracks||[]).forEach(t => {
+      if (!seen.has(t.name)) { seen.add(t.name); opts.push(`<option value="${esc(t.name)}">${esc(t.name)}</option>`); }
+    });
+  });
+  sel.innerHTML = opts.join('');
+  if (cur) sel.value = cur;
+}
+
 function renderRacing(){
   updateBadges('racing');
+  _populateRacingFilterTracks();
   RACING_GAMES.forEach(game=>{
     const key = racingKey(game);
     const el = document.getElementById('rp-racing-'+key);
     if(!el) return;
     const gd = db.racing[game]||{tracks:[],runs:[]};
-    const runs = gd.runs||[];
+    // Hide entire game section if game filter active and doesn't match
+    if (_racingFilter.game && _racingFilter.game !== game) { el.innerHTML = ''; return; }
+    const allRuns = gd.runs||[];
     const tracks = gd.tracks||[];
+    const trackNameMap = {};
+    tracks.forEach(t => { trackNameMap[t.id] = t.name; });
+    const runs = allRuns.filter(r => {
+      if (_racingFilter.car && !(r.car||'').toLowerCase().includes(_racingFilter.car)) return false;
+      if (_racingFilter.track && trackNameMap[r.trackId] !== _racingFilter.track) return false;
+      return true;
+    });
     const n = runs.length;
     const color = '#f59e0b';
     const ck = 'racing-'+key;
@@ -8059,7 +8120,7 @@ function renderAnalytics(){
     const carMap = {};
     racingRuns.forEach(r => {
       if (!r.car) return;
-      if (!carMap[r.car]) carMap[r.car] = {runs:0, cr:0, crhr:0, pods:0, dist:0, distUnit:'km'};
+      if (!carMap[r.car]) carMap[r.car] = {runs:0, cr:0, crhr:0, pods:0, dist:0, distUnit:'km', bestLap:null, bestLapTrack:null};
       const cm = carMap[r.car];
       cm.runs++;
       cm.cr += r.credits||0;
@@ -8067,6 +8128,10 @@ function renderAnalytics(){
       if (r.position != null && r.position <= 3) cm.pods++;
       const track = r.trackId != null ? trackLookup[r.trackId] : null;
       if (track && track.length > 0) { cm.dist += track.length; cm.distUnit = track.lengthUnit || 'km'; }
+      if (r.lapTimeSecs > 0 && (cm.bestLap === null || r.lapTimeSecs < cm.bestLap)) {
+        cm.bestLap = r.lapTimeSecs;
+        cm.bestLapTrack = r.trackId;
+      }
     });
     const carEntries = Object.entries(carMap).sort((a,b) => b[1].crhr - a[1].crhr);
     const bestCarName = carEntries.length ? carEntries[0][0] : null;
@@ -8147,6 +8212,8 @@ function renderAnalytics(){
       const distStr = d.dist > 0 ? d.dist.toFixed(1) + ' ' + d.distUnit : '—';
       const podPct  = d.runs ? Math.round(d.pods / d.runs * 100) + '%' : '—';
       const avgCrHrStr = d.runs ? Math.round(d.crhr / d.runs).toLocaleString() : '—';
+      const bestLapStr = d.bestLap ? fmtSecs(d.bestLap) : '—';
+      const bestLapTrackName = d.bestLapTrack != null ? (trackLookup[d.bestLapTrack]?.name || '') : '';
       return `<tr>
         <td style="width:44px;padding:6px 8px">${photoHtml}</td>
         <td style="font-weight:600">${esc(name)}</td>
@@ -8155,6 +8222,7 @@ function renderAnalytics(){
         <td>${avgCrHrStr}</td>
         <td>${distStr}</td>
         <td>${podPct}</td>
+        <td title="${esc(bestLapTrackName)}" style="font-family:'JetBrains Mono',monospace">${bestLapStr}</td>
       </tr>`;
     }).join('');
 
@@ -8207,7 +8275,7 @@ function renderAnalytics(){
       ${carEntries.length ? `<div class="analytics-section" style="margin-top:20px">
         <div class="analytics-section-title">Car Breakdown</div>
         <div class="analytics-table-wrap"><table class="analytics-table">
-          <thead><tr><th></th><th>Car</th><th>Races</th><th>Total Credits</th><th>Avg Cr/Hr</th><th>Distance</th><th>Podium %</th></tr></thead>
+          <thead><tr><th></th><th>Car</th><th>Races</th><th>Total Credits</th><th>Avg Cr/Hr</th><th>Distance</th><th>Podium %</th><th>Best Lap</th></tr></thead>
           <tbody>${carTableRows}</tbody>
         </table></div>
       </div>` : ''}
@@ -10636,8 +10704,7 @@ function psUpdateTeamGen(val) { const t = psGetActive(); if(!t) return; t.gen=va
 function psLogResult(result) {
   const t = psGetActive(); if (!t) return;
   t.record[result === 'win' ? 'w' : 'l']++;
-  const note = '';
-  t.matches.unshift({ result, date: new Date().toISOString().slice(0,10), note });
+  t.matches.unshift({ result, date: new Date().toISOString().slice(0,10), opponent: '', note: '' });
   psSave(psTeams);
   psRenderRecord();
   psRenderMatchLog();
@@ -10815,7 +10882,9 @@ function psRenderMatchLog() {
   list.innerHTML = t.matches.map((m, i) => `
     <div class="ps-match-row">
       <span class="ps-match-result ${m.result}">${m.result === 'win' ? 'WIN' : 'LOSS'}</span>
-      <input class="ps-match-note-input" value="${esc(m.note||'')}" placeholder="Opponent, notes…"
+      <input class="ps-match-note-input" value="${esc(m.opponent||'')}" placeholder="Opponent…" style="flex:0.8;min-width:80px"
+        oninput="psUpdateMatchOpponent('${t.id}',${i},this.value)">
+      <input class="ps-match-note-input" value="${esc(m.note||'')}" placeholder="Notes…"
         oninput="psUpdateMatchNote('${t.id}',${i},this.value)">
       <span class="ps-match-date">${m.date}</span>
       <button class="ps-match-del" onclick="psDeleteMatch(${i})" title="Delete">✕</button>
@@ -10836,6 +10905,10 @@ function psUpdateIV(tid, pi, stat, val) {
 function psUpdateMatchNote(tid, idx, val) {
   const t = psTeams.find(x=>x.id===tid); if (!t||!t.matches[idx]) return;
   t.matches[idx].note = val; psSave(psTeams);
+}
+function psUpdateMatchOpponent(tid, idx, val) {
+  const t = psTeams.find(x=>x.id===tid); if (!t||!t.matches[idx]) return;
+  t.matches[idx].opponent = val; psSave(psTeams);
 }
 
 // ── Pokémon management ────────────────────────────────────────
@@ -11206,6 +11279,13 @@ async function psFetchSuggestions(team) {
       let score = _psScoreCandidate(name, analysis);
       const se = smogon[name];
       if (se) {
+        // Ability immunity bonus: candidate's top ability nullifies a type threatening the team
+        const topAbility = Object.entries(se.Abilities||{}).sort((a,b)=>b[1]-a[1])[0]?.[0] || '';
+        if (topAbility) {
+          analysis.weaknesses.forEach(weakType => {
+            if (_psAbilityImmune(topAbility, weakType)) score += 2;
+          });
+        }
         // Teammate synergy: how often this pokemon is run alongside existing team members
         if (se.Teammates) {
           team.pokemon.forEach(p => {
