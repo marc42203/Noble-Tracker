@@ -5984,6 +5984,7 @@ function applyCarSel(){
 }
 
 var _racingFilter = {game:'', track:'', car:''};
+var _tableSort = {}; // keyed by ck (e.g. 'ow-Damage'), value is sort key
 
 function applyRacingFilter() {
   _racingFilter.game  = (document.getElementById('rf-game')||{}).value  || '';
@@ -6449,6 +6450,7 @@ function renderHeroRole(g, role){
     <div class="sub-section-hdr" id="ssh-${ck}-tbl" onclick="toggleSubSection('${ck}-tbl')" data-collapsed="0">
       <span class="sub-section-title">Match History</span>
       <div style="display:flex;gap:6px;align-items:center" onclick="event.stopPropagation()">
+        <select class="filter-select" id="sort-${ck}" onchange="applyTableSort('${g}','${role}')" style="font-size:11px;padding:3px 6px;height:28px">${[['newest','⬇ Newest'],['oldest','⬆ Oldest'],['kills-desc','💀 Most Kills'],['kills-asc','💀 Least Kills'],['alpha','A→Z'],['alpha-desc','Z→A']].map(([v,l])=>`<option value="${v}"${(_tableSort[ck]||'newest')===v?' selected':''}>${l}</option>`).join('')}</select>
         <button class="btn-sm" onclick="triggerImport('${g}','${role}')">↑ Import CSV</button>
         <button class="btn-sm" onclick="exportCSV('${g}','${role}')">↓ Export CSV</button>
       </div>
@@ -6489,10 +6491,20 @@ function renderHeroRole(g, role){
   }, 0);
 }
 
+function _sortRows(rows, sort) {
+  if (sort === 'oldest')      return [...rows];
+  if (sort === 'kills-desc')  return [...rows].sort((a,b) => (b.kills||0) - (a.kills||0));
+  if (sort === 'kills-asc')   return [...rows].sort((a,b) => (a.kills||0) - (b.kills||0));
+  if (sort === 'alpha')       return [...rows].sort((a,b) => (a.char||a.difficulty||'').localeCompare(b.char||b.difficulty||''));
+  if (sort === 'alpha-desc')  return [...rows].sort((a,b) => (b.char||b.difficulty||'').localeCompare(a.char||a.difficulty||''));
+  return [...rows].reverse(); // default: newest
+}
+
 function buildHeroTable(g, role, data, color, ck, filterChar=''){
   const filtered = filterChar ? data.filter(d=>d.char===filterChar) : data;
   if(!filtered.length) return `<tr class="empty-row"><td colspan="9">${filterChar?'No sessions for '+filterChar+' — try a different filter':'No sessions yet — click "+ Log Session" to get started'}</td></tr>`;
-  return [...filtered].reverse().map(d=>{
+  const sort = _tableSort[ck] || 'newest';
+  return _sortRows(filtered, sort).map(d=>{
     const kd=d.deaths?fmt(d.kills/d.deaths,2):d.kills?'∞':'—';
     const exc = (g==='ow'||g==='rv') && (typeof gsetIsExceptional === 'function') ? gsetIsExceptional(g, role, d) : isExceptional(g, role, d);
     const bad = (g==='ow'||g==='rv') && (typeof gsetIsUnderperforming === 'function') ? gsetIsUnderperforming(g, role, d) : false;
@@ -6622,6 +6634,7 @@ function renderHDFaction(faction){
     <div class="sub-section-hdr" id="ssh-${ck}-tbl" onclick="toggleSubSection('${ck}-tbl')" data-collapsed="0">
       <span class="sub-section-title">Mission History</span>
       <div style="display:flex;gap:6px;align-items:center" onclick="event.stopPropagation()">
+        <select class="filter-select" id="sort-${ck}" onchange="applyHDTableSort('${faction}')" style="font-size:11px;padding:3px 6px;height:28px">${[['newest','⬇ Newest'],['oldest','⬆ Oldest'],['kills-desc','💀 Most Kills'],['kills-asc','💀 Least Kills'],['alpha','A→Z (Diff)']].map(([v,l])=>`<option value="${v}"${(_tableSort[ck]||'newest')===v?' selected':''}>${l}</option>`).join('')}</select>
         <button class="btn-sm" onclick="triggerImport('hd','${faction}')">↑ Import CSV</button>
         <button class="btn-sm" onclick="exportCSV('hd','${faction}')">↓ Export CSV</button>
       </div>
@@ -6664,7 +6677,8 @@ function renderHDFaction(faction){
 function buildHDTable(faction, data, color, ck, filterDiff=''){
   const filtered = filterDiff ? data.filter(d=>d.difficulty===filterDiff) : data;
   if(!filtered.length) return `<tr class="empty-row"><td colspan="11">${filterDiff?'No missions at '+filterDiff:'No missions yet — click "+ Log Mission" to get started'}</td></tr>`;
-  return [...filtered].reverse().map(d=>{
+  const sort = _tableSort[ck] || 'newest';
+  return _sortRows(filtered, sort).map(d=>{
     const acc=d.shotsFired?fmt((d.shotsLanded/d.shotsFired)*100,1)+'%':'—';
     const exc = isExceptional('hd', faction, d);
     const excBadge = exc ? `<span class="exc-badge">🔥 Exceptional</span>` : '';
@@ -6707,6 +6721,18 @@ function clearHDFilter(faction){
   const ck = `hd-${faction}`;
   const sel = document.getElementById(`filter-${ck}`);
   if(sel) sel.value = '';
+  applyHDFilter(faction);
+}
+
+function applyTableSort(g, role) {
+  const ck = `${g}-${role}`;
+  _tableSort[ck] = document.getElementById('sort-' + ck)?.value || 'newest';
+  applyFilter(g, role);
+}
+
+function applyHDTableSort(faction) {
+  const ck = `hd-${faction}`;
+  _tableSort[ck] = document.getElementById('sort-' + ck)?.value || 'newest';
   applyHDFilter(faction);
 }
 
