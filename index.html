@@ -38,6 +38,7 @@
 <script src="https://unpkg.com/tesseract.js@v4.1.1/dist/tesseract.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -690,11 +691,7 @@ tbody td{padding:11px 14px;font-size:14px;white-space:nowrap}
 .btn-x{background:var(--surface2);border:none;cursor:pointer;color:var(--text2);font-size:18px;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .btn-x:hover{background:var(--surface3);color:var(--text)}
 .modal-body{padding:18px 20px 20px;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.hd-loadout-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);user-select:none;transition:background .15s}
-.hd-loadout-toggle:hover{background:var(--surface3);color:var(--text)}
-.hd-loadout-section{border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:2px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.hd-loadout-section .full{grid-column:1/-1}
-.hd-loadout-section label{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px}
+
 .fg{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .fg .full{grid-column:1/-1}
 .field label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:4px}
@@ -2210,6 +2207,10 @@ body.hide-bad-fx-rv .bad-badge { display: none !important; }
   border-radius: 6px; transition: color .2s;
 }
 #nt-sign-out-btn:hover { color: var(--text, #e8e8f0); }
+#nt-loading-overlay{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;background:var(--bg,#0a0a0f)}
+.nt-loading-card{display:flex;flex-direction:column;align-items:center;gap:16px;color:var(--text2,#888);font-size:1rem}
+.nt-loading-spinner{width:36px;height:36px;border:3px solid var(--border,#2a2a3a);border-top-color:var(--accent,#6366f1);border-radius:50%;animation:nt-spin .8s linear infinite}
+@keyframes nt-spin{to{transform:rotate(360deg)}}
 
 /* ═══════════════════════════════════════════════
    NEON DARK POLISH
@@ -2387,6 +2388,12 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--accent-clr,var(--bo
       Sign in with Google
     </button>
     <div id="nt-login-error"></div>
+  </div>
+</div>
+<div id="nt-loading-overlay" style="display:none">
+  <div class="nt-loading-card">
+    <div class="nt-loading-spinner"></div>
+    <div class="nt-loading-text">Loading your data…</div>
   </div>
 </div>
 
@@ -3308,25 +3315,43 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--accent-clr,var(--bo
       <div class="field"><label>Distance (km)</label><input type="number" id="hd-dist" min="0" step="0.01" placeholder="0.00"></div>
       <div class="field full"><label>Notes (Optional)</label><textarea id="hd-notes" placeholder="Any notes…"></textarea></div>
       <div class="field full" style="margin-top:4px">
-        <div class="hd-loadout-toggle" onclick="toggleHDLoadout()">⚙️ Loadout <span style="opacity:.6;font-size:10px">(optional)</span><span id="hd-loadout-chevron" style="margin-left:auto">▸</span></div>
-      </div>
-      <div id="hd-loadout-section" class="hd-loadout-section full" style="display:none">
-        <div style="grid-column:1/-1"><label>Loadout Name <span style="color:var(--text3);font-weight:400;text-transform:none">(e.g. "Anti-Automaton Meta")</span></label><input type="text" id="hd-loadout-name" placeholder="Give this build a name…" autocomplete="off"></div>
-        <div><label>Helmet</label><input type="text" id="hd-helmet" placeholder="e.g. CE-35 Trench Engineer" autocomplete="off"></div>
-        <div><label>Armor</label><input type="text" id="hd-armor" placeholder="e.g. B-24 Enforcer" autocomplete="off"></div>
-        <div class="full"><label>Primary Weapon</label><input type="text" id="hd-primary" placeholder="e.g. PLAS-1 Scorcher" autocomplete="off"></div>
-        <div class="full"><label>Secondary Weapon</label><input type="text" id="hd-secondary" placeholder="e.g. P-19 Redeemer" autocomplete="off"></div>
-        <div><label>Grenade</label><input type="text" id="hd-grenade" placeholder="e.g. G-16 Impact" autocomplete="off"></div>
-        <div style="grid-column:1/-1"><label>Stratagems (up to 4)</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px">
-            <input type="text" id="hd-strat1" placeholder="Stratagem 1" autocomplete="off">
-            <input type="text" id="hd-strat2" placeholder="Stratagem 2" autocomplete="off">
-            <input type="text" id="hd-strat3" placeholder="Stratagem 3" autocomplete="off">
-            <input type="text" id="hd-strat4" placeholder="Stratagem 4" autocomplete="off">
-          </div>
+        <label>Loadout <span style="color:var(--text3);font-weight:400;text-transform:none">(optional)</span></label>
+        <div class="track-sel-row">
+          <select id="hd-loadout-sel"><option value="">— no loadout —</option></select>
+          <button type="button" class="btn-new-track" onclick="openLoadoutModal()">+ New Loadout</button>
         </div>
       </div>
       <div class="field full" style="margin-top:4px"><button class="btn-sub hd" onclick="save('hd')">Log Mission</button></div>
+    </div></div>
+  </div>
+  <!-- HD LOADOUT PROFILE MANAGEMENT -->
+  <div class="modal hd-f" id="m-hd-loadout" style="display:none">
+    <div class="modal-hdr"><h3>Manage Loadouts</h3><button class="btn-x" onclick="backToHDModalFromLoadout()">←</button></div>
+    <div class="modal-body"><div class="fg">
+      <div class="field full"><label>Loadout Name</label><input type="text" id="hd-ld-name" placeholder="e.g. Anti-Automaton Meta" autocomplete="off"></div>
+      <div class="field full"><label>Helmet</label><input type="text" id="hd-ld-helmet" placeholder="e.g. CE-35 Trench Engineer" autocomplete="off"></div>
+      <div class="field full"><label>Armor</label><input type="text" id="hd-ld-armor" placeholder="e.g. B-24 Enforcer" autocomplete="off"></div>
+      <div class="field full"><label>Primary Weapon</label><input type="text" id="hd-ld-primary" placeholder="e.g. PLAS-1 Scorcher" autocomplete="off"></div>
+      <div class="field full"><label>Secondary Weapon</label><input type="text" id="hd-ld-secondary" placeholder="e.g. P-19 Redeemer" autocomplete="off"></div>
+      <div class="field full"><label>Grenade</label><input type="text" id="hd-ld-grenade" placeholder="e.g. G-16 Impact" autocomplete="off"></div>
+      <div class="field full"><label>Stratagems (up to 4)</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+          <input type="text" id="hd-ld-strat1" placeholder="Stratagem 1" autocomplete="off">
+          <input type="text" id="hd-ld-strat2" placeholder="Stratagem 2" autocomplete="off">
+          <input type="text" id="hd-ld-strat3" placeholder="Stratagem 3" autocomplete="off">
+          <input type="text" id="hd-ld-strat4" placeholder="Stratagem 4" autocomplete="off">
+        </div>
+      </div>
+      <div class="field full">
+        <label>Photo <span style="color:var(--text3);font-weight:400">(opt.)</span></label>
+        <input type="file" id="hd-ld-photo-input" accept="image/*" style="margin-top:4px" onchange="previewLoadoutPhoto(this)">
+        <div id="hd-ld-photo-preview" style="margin-top:6px"></div>
+      </div>
+      <div class="field full" style="margin-top:4px"><button class="btn-sub hd" onclick="saveLoadout()">Add Loadout</button></div>
+      <div class="field full">
+        <div class="track-section-hdr">Saved Loadouts</div>
+        <div class="track-list-wrap" id="hd-loadout-list"></div>
+      </div>
     </div></div>
   </div>
   <!-- RACING -->
@@ -5411,6 +5436,7 @@ function load(){
     OW_ROLES.forEach(r=>{if(!raw.ow[r])raw.ow[r]=[]});
     RV_ROLES.forEach(r=>{if(!raw.rv[r])raw.rv[r]=[]});
     HD_FACTIONS.forEach(f=>{if(!raw.hd[f])raw.hd[f]=[]});
+    if(!raw.hd.loadouts) raw.hd.loadouts=[];
     if(!raw.racing) raw.racing={};
     RACING_GAMES.forEach(g=>{
       if(!raw.racing[g]){raw.racing[g]={tracks:[],runs:[],cars:[]};}
@@ -5426,7 +5452,7 @@ function load(){
     });
     return raw;
   }catch{
-    const d={ow:{},rv:{},hd:{},racing:{}};
+    const d={ow:{},rv:{},hd:{loadouts:[]},racing:{}};
     OW_ROLES.forEach(r=>d.ow[r]=[]);
     RV_ROLES.forEach(r=>d.rv[r]=[]);
     HD_FACTIONS.forEach(f=>d.hd[f]=[]);
@@ -5434,7 +5460,23 @@ function load(){
     return d;
   }
 }
-function persist(){ localStorage.setItem(SK,JSON.stringify(db)); }
+function persist(){
+  localStorage.setItem(SK,JSON.stringify(db));
+  if(window.__ntUser && typeof firebase!=='undefined'){
+    try{
+      var _fsP=firebase.firestore();
+      var _uid=window.__ntUser.uid;
+      var _safe=JSON.parse(JSON.stringify(db));
+      var _ref=function(k){return _fsP.collection('users').doc(_uid).collection('data').doc(k);};
+      Promise.all([
+        _ref('ow').set({ow:_safe.ow||{}}),
+        _ref('rv').set({rv:_safe.rv||{}}),
+        _ref('hd').set({hd:_safe.hd||{}}),
+        _ref('racing').set({racing:_safe.racing||{}}),
+      ]).catch(function(e){console.warn('Firestore sync error:',e);});
+    }catch(e){console.warn('Firestore persist error:',e);}
+  }
+}
 var db = load();
 var editId = {ow:null,rv:null,hd:null,racing:null};
 var charts = {};
@@ -5578,28 +5620,14 @@ function openModal(g, role, entry=null){
       document.getElementById('hd-stims').value=entry.stims;
       document.getElementById('hd-dist').value=entry.distance;
       document.getElementById('hd-notes').value=entry.notes||'';
-      const ld = entry.loadout||{};
-      document.getElementById('hd-loadout-name').value=ld.name||'';
-      document.getElementById('hd-helmet').value=ld.helmet||'';
-      document.getElementById('hd-armor').value=ld.armor||'';
-      document.getElementById('hd-primary').value=ld.primary||'';
-      document.getElementById('hd-secondary').value=ld.secondary||'';
-      document.getElementById('hd-grenade').value=ld.grenade||'';
-      ['hd-strat1','hd-strat2','hd-strat3','hd-strat4'].forEach((id,i)=>{document.getElementById(id).value=(ld.strats||[])[i]||'';});
-      const hasLd = ld.helmet||ld.armor||ld.primary||ld.secondary||ld.grenade||(ld.strats||[]).length;
-      const ldSec = document.getElementById('hd-loadout-section');
-      const ldChev = document.getElementById('hd-loadout-chevron');
-      if(ldSec){ldSec.style.display=hasLd?'grid':'none';}
-      if(ldChev){ldChev.textContent=hasLd?'▾':'▸';}
+      populateLoadoutSel();
+      document.getElementById('hd-loadout-sel').value = entry.loadoutId || '';
     } else {
       initDiff('');
       ['kills','deaths','sfired','slanded','strat','samp','rev','stims','dist'].forEach(f=>document.getElementById('hd-'+f).value='');
       document.getElementById('hd-notes').value='';
-      ['hd-loadout-name','hd-helmet','hd-armor','hd-primary','hd-secondary','hd-grenade','hd-strat1','hd-strat2','hd-strat3','hd-strat4'].forEach(id=>{document.getElementById(id).value='';});
-      const ldSec = document.getElementById('hd-loadout-section');
-      const ldChev = document.getElementById('hd-loadout-chevron');
-      if(ldSec) ldSec.style.display='none';
-      if(ldChev) ldChev.textContent='▸';
+      populateLoadoutSel();
+      document.getElementById('hd-loadout-sel').value = '';
     }
   }
 }
@@ -5609,14 +5637,6 @@ function closeModal(g){
   document.getElementById('m-'+g).style.display='none';
   editId[g]=null;
   closeAllSD();
-}
-function toggleHDLoadout(){
-  const sec = document.getElementById('hd-loadout-section');
-  const chev = document.getElementById('hd-loadout-chevron');
-  if(!sec) return;
-  const open = sec.style.display !== 'none';
-  sec.style.display = open ? 'none' : 'grid';
-  if(chev) chev.textContent = open ? '▸' : '▾';
 }
 function bgClose(e){
   if(e.target===document.getElementById('mbg')){
@@ -5649,14 +5669,9 @@ function save(g){
     const diff = document.getElementById('hd-diff').value;
     if(!diff){toast('Please select a difficulty');return}
     const oldDate = editId.hd ? db.hd[role].find(d=>d.id===editId.hd)?.date : null;
-    const _ldName    = (document.getElementById('hd-loadout-name')||{}).value?.trim()||'';
-    const _ldHelmet  = (document.getElementById('hd-helmet')||{}).value?.trim()||'';
-    const _ldArmor   = (document.getElementById('hd-armor')||{}).value?.trim()||'';
-    const _ldPrimary = (document.getElementById('hd-primary')||{}).value?.trim()||'';
-    const _ldSecondary=(document.getElementById('hd-secondary')||{}).value?.trim()||'';
-    const _ldGrenade = (document.getElementById('hd-grenade')||{}).value?.trim()||'';
-    const _ldStrats  = ['hd-strat1','hd-strat2','hd-strat3','hd-strat4'].map(id=>(document.getElementById(id)||{}).value?.trim()||'').filter(s=>s);
-    const _ldAny = _ldName||_ldHelmet||_ldArmor||_ldPrimary||_ldSecondary||_ldGrenade||_ldStrats.length;
+    const _ldSelVal = document.getElementById('hd-loadout-sel')?.value;
+    const _ldId = _ldSelVal ? parseInt(_ldSelVal) : null;
+    const _ldProfile = _ldId ? (db.hd.loadouts||[]).find(l=>l.id===_ldId) : null;
     const e={
       id:editId.hd??nid.hd++, date:oldDate||new Date().toISOString(),
       difficulty:diff, faction:role,
@@ -5670,7 +5685,8 @@ function save(g){
       stims:+document.getElementById('hd-stims').value||0,
       distance:+document.getElementById('hd-dist').value||0,
       notes:document.getElementById('hd-notes').value.trim(),
-      loadout: _ldAny ? {name:_ldName,helmet:_ldHelmet,armor:_ldArmor,primary:_ldPrimary,secondary:_ldSecondary,grenade:_ldGrenade,strats:_ldStrats} : null,
+      loadoutId: _ldId||null,
+      loadout: _ldProfile ? {name:_ldProfile.name,helmet:_ldProfile.helmet,armor:_ldProfile.armor,primary:_ldProfile.primary,secondary:_ldProfile.secondary,grenade:_ldProfile.grenade,strats:_ldProfile.strats||[],photo:_ldProfile.photo||null} : null,
     };
     if(editId.hd!==null){db.hd[role]=db.hd[role].map(d=>d.id===editId.hd?e:d);toast('Mission updated ✓')}
     else{db.hd[role].push(e);toast('Mission logged ✓')}
@@ -5922,6 +5938,107 @@ function backToRacingModal(){
   if(_trackGame) populateTrackSel(_trackGame,'racing-track-sel',null);
 }
 
+// ── HD LOADOUT PROFILE FUNCTIONS ─────────────────────────────────────────────
+var nidLoadout = (function(){
+  const lds = db.hd.loadouts||[];
+  return lds.length ? Math.max(...lds.map(l=>l.id))+1 : 1;
+})();
+
+function openLoadoutModal(){
+  ['hd-ld-name','hd-ld-helmet','hd-ld-armor','hd-ld-primary','hd-ld-secondary','hd-ld-grenade',
+   'hd-ld-strat1','hd-ld-strat2','hd-ld-strat3','hd-ld-strat4'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  const pi = document.getElementById('hd-ld-photo-input');
+  const pv = document.getElementById('hd-ld-photo-preview');
+  if(pi) pi.value='';
+  if(pv) pv.innerHTML='';
+  window._pendingLoadoutPhoto = null;
+  renderLoadoutList();
+  document.getElementById('m-hd').style.display='none';
+  document.getElementById('m-hd-loadout').style.display='block';
+}
+
+function backToHDModalFromLoadout(){
+  document.getElementById('m-hd-loadout').style.display='none';
+  document.getElementById('m-hd').style.display='block';
+  populateLoadoutSel();
+}
+
+function saveLoadout(){
+  const name = (document.getElementById('hd-ld-name')||{}).value?.trim()||'';
+  if(!name){toast('Enter a loadout name'); return;}
+  if(!db.hd.loadouts) db.hd.loadouts=[];
+  const ld = {
+    id: nidLoadout++,
+    name,
+    helmet:    (document.getElementById('hd-ld-helmet')||{}).value?.trim()||'',
+    armor:     (document.getElementById('hd-ld-armor')||{}).value?.trim()||'',
+    primary:   (document.getElementById('hd-ld-primary')||{}).value?.trim()||'',
+    secondary: (document.getElementById('hd-ld-secondary')||{}).value?.trim()||'',
+    grenade:   (document.getElementById('hd-ld-grenade')||{}).value?.trim()||'',
+    strats:    ['hd-ld-strat1','hd-ld-strat2','hd-ld-strat3','hd-ld-strat4'].map(id=>(document.getElementById(id)||{}).value?.trim()||'').filter(s=>s),
+    photo:     window._pendingLoadoutPhoto || null,
+  };
+  db.hd.loadouts.push(ld);
+  persist();
+  ['hd-ld-name','hd-ld-helmet','hd-ld-armor','hd-ld-primary','hd-ld-secondary','hd-ld-grenade',
+   'hd-ld-strat1','hd-ld-strat2','hd-ld-strat3','hd-ld-strat4'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  const pi = document.getElementById('hd-ld-photo-input');
+  const pv = document.getElementById('hd-ld-photo-preview');
+  if(pi) pi.value='';
+  if(pv) pv.innerHTML='';
+  window._pendingLoadoutPhoto = null;
+  renderLoadoutList();
+  toast('Loadout saved ✓');
+}
+
+function delLoadout(id){
+  appConfirm('Delete this loadout profile?', function(){
+    db.hd.loadouts = (db.hd.loadouts||[]).filter(l=>l.id!==id);
+    persist(); renderLoadoutList(); toast('Loadout deleted ✓');
+  });
+}
+
+function renderLoadoutList(){
+  const el = document.getElementById('hd-loadout-list');
+  if(!el) return;
+  const lds = db.hd.loadouts||[];
+  if(!lds.length){el.innerHTML='<p style="color:var(--text3);font-size:13px;padding:8px 0">No loadouts yet</p>'; return;}
+  el.innerHTML = lds.map(l=>`<div class="track-list-item">
+    ${l.photo?`<img src="${l.photo}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid var(--border)">`:
+      '<div style="width:36px;height:36px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">⚙️</div>'}
+    <div style="flex:1;min-width:0">
+      <strong>${esc(l.name)}</strong>
+      ${l.primary?`<span class="track-section-meta"> · ${esc(l.primary)}</span>`:''}
+      ${l.secondary?`<span class="track-section-meta"> / ${esc(l.secondary)}</span>`:''}
+    </div>
+    <button class="btn-icon" onclick="delLoadout(${l.id})" title="Delete loadout">🗑️</button>
+  </div>`).join('');
+}
+
+function populateLoadoutSel(){
+  const sel = document.getElementById('hd-loadout-sel');
+  if(!sel) return;
+  const lds = db.hd.loadouts||[];
+  sel.innerHTML = '<option value="">— no loadout —</option>' +
+    lds.map(l=>`<option value="${l.id}">${esc(l.name)}</option>`).join('');
+}
+
+function previewLoadoutPhoto(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    window._pendingLoadoutPhoto = e.target.result;
+    const prev = document.getElementById('hd-ld-photo-preview');
+    if(prev) prev.innerHTML = `<img src="${e.target.result}" style="height:60px;border-radius:8px;object-fit:cover;border:1px solid var(--border)">`;
+  };
+  reader.readAsDataURL(file);
+}
+
 // ── CAR PROFILE FUNCTIONS ────────────────────────────────────────────────────
 var _carGame = null;
 var nidCar = {};
@@ -5980,6 +6097,8 @@ function previewCarPhoto(input){
   };
   reader.readAsDataURL(file);
 }
+
+
 
 function saveCar(){
   if(!_carGame) return;
@@ -6749,7 +6868,7 @@ function buildHDTable(faction, data, color, ck, filterDiff=''){
     const hlAcc = exc && tHD.accuracy60 && +d.shotsFired>750 && (+d.shotsLanded||0)/(+d.shotsFired)>=0.60
       ? `<span class="exc-stat" style="color:${color};font-weight:700">${acc}</span>` : acc;
     return `<tr class="${exc?'exceptional':''}"`+"`${excStyle}>`"+`
-      <td><div style="display:flex;align-items:center;gap:6px">${diffImg(d.difficulty)}<span class="diff-badge ${diffClass(d.difficulty)}">${esc(d.difficulty)}</span>${d.loadout?`<span title="${[(d.loadout.name?'🏷 '+d.loadout.name:''),'Primary: '+(d.loadout.primary||'—'),'Secondary: '+(d.loadout.secondary||'—'),'Grenade: '+(d.loadout.grenade||'—'),'Stratagems: '+((d.loadout.strats||[]).join(', ')||'—')].filter(Boolean).join('\n')}" style="cursor:help;font-size:11px;opacity:.7">⚙️</span>`:''}</div>${excBadge}</td>
+      <td><div style="display:flex;align-items:center;gap:6px">${diffImg(d.difficulty)}<span class="diff-badge ${diffClass(d.difficulty)}">${esc(d.difficulty)}</span>${d.loadout?`${d.loadout.photo?`<img src="${d.loadout.photo}" style="width:24px;height:24px;border-radius:4px;object-fit:cover;flex-shrink:0" title="${esc(d.loadout.name||'Loadout photo')}">`:''}<span title="${[(d.loadout.name?'🏷 '+d.loadout.name:''),'Primary: '+(d.loadout.primary||'—'),'Secondary: '+(d.loadout.secondary||'—'),'Grenade: '+(d.loadout.grenade||'—'),'Stratagems: '+((d.loadout.strats||[]).join(', ')||'—')].filter(Boolean).join('\n')}" style="cursor:help;font-size:11px;opacity:.7">⚙️</span>`:''}</div>${excBadge}</td>
       <td class="mono">${hlHD('kills',d.kills)}</td><td class="mono">${fmtN(d.deaths)}</td>
       <td class="mono dim">${hlAcc}</td>
       <td class="mono">${d.stratagems}</td><td class="mono">${d.samples}</td>
@@ -8103,7 +8222,7 @@ function renderAnalytics(){
     const tableRows = builds.map(b => {
       const ldParts = [b.loadout.primary, b.loadout.secondary, b.loadout.grenade, ...(b.loadout.strats||[])].filter(Boolean);
       return `<tr>
-        <td style="font-weight:600;color:var(--text)">${esc(b.name)}</td>
+        <td style="font-weight:600;color:var(--text)"><div style="display:flex;align-items:center;gap:6px">${b.loadout.photo?`<img src="${b.loadout.photo}" style="width:28px;height:28px;border-radius:5px;object-fit:cover;flex-shrink:0">`:''}${esc(b.name)}</div></td>
         <td>${b.missions}</td>
         <td style="color:#22c55e;font-weight:700">${b.avgKills}</td>
         <td>${b.avgDeaths}</td>
@@ -14811,44 +14930,160 @@ if ('serviceWorker' in navigator) {
   });
 
   var _auth     = firebase.auth(_fbApp);
+  var _fs       = firebase.firestore(_fbApp);
   var _provider = new firebase.auth.GoogleAuthProvider();
 
-  var loginScreen = document.getElementById('nt-login-screen');
-  var signInBtn   = document.getElementById('nt-sign-in-btn');
-  var signOutBtn  = document.getElementById('nt-sign-out-btn');
-  var userAvatar  = document.getElementById('nt-user-avatar');
-  var userName    = document.getElementById('nt-user-name');
-  var loginError  = document.getElementById('nt-login-error');
-  var _signInHtml = signInBtn ? signInBtn.innerHTML : '';
+  var loginScreen     = document.getElementById('nt-login-screen');
+  var loadingOverlay  = document.getElementById('nt-loading-overlay');
+  var signInBtn       = document.getElementById('nt-sign-in-btn');
+  var signOutBtn      = document.getElementById('nt-sign-out-btn');
+  var userAvatar      = document.getElementById('nt-user-avatar');
+  var userName        = document.getElementById('nt-user-name');
+  var loginError      = document.getElementById('nt-login-error');
+  var _signInHtml     = signInBtn ? signInBtn.innerHTML : '';
 
+  function _showLoading(msg){
+    if(loadingOverlay){
+      var t=loadingOverlay.querySelector('.nt-loading-text');
+      if(t) t.textContent=msg||'Loading your data\u2026';
+      loadingOverlay.style.display='flex';
+    }
+  }
+  function _hideLoading(){ if(loadingOverlay) loadingOverlay.style.display='none'; }
+
+  function _userRef(uid,doc){ return _fs.collection('users').doc(uid).collection('data').doc(doc); }
+
+  function _loadFromFirestore(uid){
+    return Promise.all(['ow','rv','hd','racing'].map(function(k){ return _userRef(uid,k).get(); }))
+      .then(function(snaps){
+        var merged={};
+        ['ow','rv','hd','racing'].forEach(function(k,i){ if(snaps[i].exists) Object.assign(merged,snaps[i].data()); });
+        return Object.keys(merged).length ? merged : null;
+      });
+  }
+
+  function _saveToFirestore(uid,dbData){
+    var safe=JSON.parse(JSON.stringify(dbData));
+    var ref=function(k){return _userRef(uid,k);};
+    return Promise.all([
+      ref('ow').set({ow:safe.ow||{}}),
+      ref('rv').set({rv:safe.rv||{}}),
+      ref('hd').set({hd:safe.hd||{}}),
+      ref('racing').set({racing:safe.racing||{}}),
+    ]);
+  }
+
+  // Re-initialize all global state from a new db object then re-render
+  function _applyDB(newDb){
+    if(!newDb.ow) newDb.ow={};
+    if(!newDb.rv) newDb.rv={};
+    if(!newDb.hd) newDb.hd={};
+    if(!newDb.hd.loadouts) newDb.hd.loadouts=[];
+    if(!newDb.racing) newDb.racing={};
+    OW_ROLES.forEach(function(r){ if(!newDb.ow[r]) newDb.ow[r]=[]; });
+    RV_ROLES.forEach(function(r){ if(!newDb.rv[r]) newDb.rv[r]=[]; });
+    HD_FACTIONS.forEach(function(f){ if(!newDb.hd[f]) newDb.hd[f]=[]; });
+    RACING_GAMES.forEach(function(g){
+      if(!newDb.racing[g]) newDb.racing[g]={tracks:[],runs:[],cars:[]};
+      if(!newDb.racing[g].tracks) newDb.racing[g].tracks=[];
+      if(!newDb.racing[g].runs)   newDb.racing[g].runs=[];
+      if(!newDb.racing[g].cars)   newDb.racing[g].cars=[];
+    });
+    db=newDb;
+    // Reset counters
+    nid.ow=1; nid.rv=1; nid.hd=1; nid.racing=1;
+    ['ow','rv','hd'].forEach(function(g){
+      var all=getAllEntries(g);
+      if(all.length) nid[g]=Math.max.apply(null,all.map(function(d){return d.id;}))+1;
+    });
+    var allRuns=RACING_GAMES.flatMap(function(g){return db.racing[g].runs;});
+    if(allRuns.length) nid.racing=Math.max.apply(null,allRuns.map(function(d){return d.id;}))+1;
+    RACING_GAMES.forEach(function(g){
+      var tracks=db.racing[g].tracks||[];
+      nidTrack[g]=tracks.length?Math.max.apply(null,tracks.map(function(t){return t.id;}))+1:1;
+      var cars=db.racing[g].cars||[];
+      nidCar[g]=cars.length?Math.max.apply(null,cars.map(function(c){return c.id;}))+1:1;
+    });
+    var lds=db.hd.loadouts||[];
+    nidLoadout=lds.length?Math.max.apply(null,lds.map(function(l){return l.id;}))+1:1;
+    localStorage.setItem(SK,JSON.stringify(db));
+    try{ renderAll(); }catch(e){ console.warn('renderAll error:',e); }
+  }
+
+  function _emptyDB(){
+    var d={ow:{},rv:{},hd:{loadouts:[]},racing:{}};
+    OW_ROLES.forEach(function(r){d.ow[r]=[];});
+    RV_ROLES.forEach(function(r){d.rv[r]=[];});
+    HD_FACTIONS.forEach(function(f){d.hd[f]=[];});
+    RACING_GAMES.forEach(function(g){d.racing[g]={tracks:[],runs:[],cars:[]};});
+    return d;
+  }
+
+  // Sign in: try popup, fall back to redirect (handles mobile popup blockers)
   window._ntSignIn = function(){
-    if(signInBtn){ signInBtn.disabled = true; signInBtn.textContent = 'Signing in\u2026'; }
-    if(loginError) loginError.textContent = '';
+    if(signInBtn){ signInBtn.disabled=true; signInBtn.textContent='Signing in\u2026'; }
+    if(loginError) loginError.textContent='';
     _auth.signInWithPopup(_provider).catch(function(err){
-      console.error('Sign-in error:', err);
-      if(signInBtn){ signInBtn.disabled = false; signInBtn.innerHTML = _signInHtml; }
-      if(loginError) loginError.textContent = 'Sign-in failed: ' + (err.code || err.message);
+      if(err.code==='auth/popup-blocked'||err.code==='auth/popup-closed-by-user'||err.code==='auth/cancelled-popup-request'){
+        _auth.signInWithRedirect(_provider);
+      } else {
+        console.error('Sign-in error:',err);
+        if(signInBtn){ signInBtn.disabled=false; signInBtn.innerHTML=_signInHtml; }
+        if(loginError) loginError.textContent='Sign-in failed: '+(err.code||err.message);
+      }
     });
   };
-  if(signInBtn) signInBtn.addEventListener('click', window._ntSignIn);
+  if(signInBtn) signInBtn.addEventListener('click',window._ntSignIn);
 
-  if(signOutBtn) signOutBtn.addEventListener('click', function(){ _auth.signOut(); });
+  if(signOutBtn) signOutBtn.addEventListener('click',function(){ _auth.signOut(); });
+
+  // Handle return from redirect sign-in (mobile)
+  _auth.getRedirectResult().catch(function(err){
+    if(err.code && err.code!=='auth/no-redirect-operation'){
+      console.error('Redirect sign-in error:',err);
+      if(loginError) loginError.textContent='Sign-in failed: '+(err.code||err.message);
+      if(signInBtn){ signInBtn.disabled=false; signInBtn.innerHTML=_signInHtml; }
+    }
+  });
 
   _auth.onAuthStateChanged(function(user){
-    window.__ntUser = user || null;
+    window.__ntUser=user||null;
     if(user){
-      if(loginScreen) loginScreen.style.display = 'none';
-      if(userAvatar){ userAvatar.src = user.photoURL || ''; userAvatar.style.display = user.photoURL ? '' : 'none'; }
-      if(userName)   userName.textContent = user.displayName || user.email || '';
+      if(loginScreen) loginScreen.style.display='none';
+      if(userAvatar){ userAvatar.src=user.photoURL||''; userAvatar.style.display=user.photoURL?'':'none'; }
+      if(userName) userName.textContent=user.displayName||user.email||'';
+      _showLoading('Loading your data\u2026');
+      _loadFromFirestore(user.uid).then(function(fsDb){
+        if(fsDb){
+          _applyDB(fsDb);
+          toast('Data synced \u2713');
+        } else {
+          // No cloud data yet — migrate existing local data if any
+          var hasData=getAllEntries('ow').length||getAllEntries('rv').length||getAllEntries('hd').length||getAllEntries('racing').length;
+          if(hasData){
+            _saveToFirestore(user.uid,db)
+              .then(function(){ toast('Local data backed up to cloud \u2713'); })
+              .catch(function(e){ console.error('Firestore backup error:',e); });
+          } else {
+            toast('Welcome! Stats will sync across all your devices.');
+          }
+        }
+        _hideLoading();
+      }).catch(function(err){
+        console.error('Firestore load error:',err);
+        _hideLoading();
+        toast('Could not load cloud data \u2014 using local data');
+      });
     } else {
-      if(loginScreen) loginScreen.style.display = '';
-      if(signInBtn){ signInBtn.disabled = false; signInBtn.innerHTML = _signInHtml; }
+      _applyDB(_emptyDB());
+      if(loginScreen) loginScreen.style.display='';
+      if(signInBtn){ signInBtn.disabled=false; signInBtn.innerHTML=_signInHtml; }
     }
   });
   } catch(e) {
-    var errEl = document.getElementById('nt-login-error');
-    if(errEl) errEl.textContent = 'Auth init error: ' + e.message;
-    console.error('Auth init error:', e);
+    var errEl=document.getElementById('nt-login-error');
+    if(errEl) errEl.textContent='Auth init error: '+e.message;
+    console.error('Auth init error:',e);
   }
 })();
 </script>
