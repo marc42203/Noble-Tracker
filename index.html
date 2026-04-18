@@ -690,6 +690,11 @@ tbody td{padding:11px 14px;font-size:14px;white-space:nowrap}
 .btn-x{background:var(--surface2);border:none;cursor:pointer;color:var(--text2);font-size:18px;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .btn-x:hover{background:var(--surface3);color:var(--text)}
 .modal-body{padding:18px 20px 20px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.hd-loadout-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);user-select:none;transition:background .15s}
+.hd-loadout-toggle:hover{background:var(--surface3);color:var(--text)}
+.hd-loadout-section{border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:2px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hd-loadout-section .full{grid-column:1/-1}
+.hd-loadout-section label{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px}
 .fg{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .fg .full{grid-column:1/-1}
 .field label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:4px}
@@ -3302,6 +3307,24 @@ tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--accent-clr,var(--bo
       <div class="field"><label>Stims Used</label><input type="number" id="hd-stims" min="0" placeholder="0"></div>
       <div class="field"><label>Distance (km)</label><input type="number" id="hd-dist" min="0" step="0.01" placeholder="0.00"></div>
       <div class="field full"><label>Notes (Optional)</label><textarea id="hd-notes" placeholder="Any notes…"></textarea></div>
+      <div class="field full" style="margin-top:4px">
+        <div class="hd-loadout-toggle" onclick="toggleHDLoadout()">⚙️ Loadout <span style="opacity:.6;font-size:10px">(optional)</span><span id="hd-loadout-chevron" style="margin-left:auto">▸</span></div>
+      </div>
+      <div id="hd-loadout-section" class="hd-loadout-section full" style="display:none">
+        <div><label>Helmet</label><input type="text" id="hd-helmet" placeholder="e.g. CE-35 Trench Engineer" autocomplete="off"></div>
+        <div><label>Armor</label><input type="text" id="hd-armor" placeholder="e.g. B-24 Enforcer" autocomplete="off"></div>
+        <div class="full"><label>Primary Weapon</label><input type="text" id="hd-primary" placeholder="e.g. PLAS-1 Scorcher" autocomplete="off"></div>
+        <div class="full"><label>Secondary Weapon</label><input type="text" id="hd-secondary" placeholder="e.g. P-19 Redeemer" autocomplete="off"></div>
+        <div><label>Grenade</label><input type="text" id="hd-grenade" placeholder="e.g. G-16 Impact" autocomplete="off"></div>
+        <div style="grid-column:1/-1"><label>Stratagems (up to 4)</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px">
+            <input type="text" id="hd-strat1" placeholder="Stratagem 1" autocomplete="off">
+            <input type="text" id="hd-strat2" placeholder="Stratagem 2" autocomplete="off">
+            <input type="text" id="hd-strat3" placeholder="Stratagem 3" autocomplete="off">
+            <input type="text" id="hd-strat4" placeholder="Stratagem 4" autocomplete="off">
+          </div>
+        </div>
+      </div>
       <div class="field full" style="margin-top:4px"><button class="btn-sub hd" onclick="save('hd')">Log Mission</button></div>
     </div></div>
   </div>
@@ -5554,10 +5577,27 @@ function openModal(g, role, entry=null){
       document.getElementById('hd-stims').value=entry.stims;
       document.getElementById('hd-dist').value=entry.distance;
       document.getElementById('hd-notes').value=entry.notes||'';
+      const ld = entry.loadout||{};
+      document.getElementById('hd-helmet').value=ld.helmet||'';
+      document.getElementById('hd-armor').value=ld.armor||'';
+      document.getElementById('hd-primary').value=ld.primary||'';
+      document.getElementById('hd-secondary').value=ld.secondary||'';
+      document.getElementById('hd-grenade').value=ld.grenade||'';
+      ['hd-strat1','hd-strat2','hd-strat3','hd-strat4'].forEach((id,i)=>{document.getElementById(id).value=(ld.strats||[])[i]||'';});
+      const hasLd = ld.helmet||ld.armor||ld.primary||ld.secondary||ld.grenade||(ld.strats||[]).length;
+      const ldSec = document.getElementById('hd-loadout-section');
+      const ldChev = document.getElementById('hd-loadout-chevron');
+      if(ldSec){ldSec.style.display=hasLd?'grid':'none';}
+      if(ldChev){ldChev.textContent=hasLd?'▾':'▸';}
     } else {
       initDiff('');
       ['kills','deaths','sfired','slanded','strat','samp','rev','stims','dist'].forEach(f=>document.getElementById('hd-'+f).value='');
       document.getElementById('hd-notes').value='';
+      ['hd-helmet','hd-armor','hd-primary','hd-secondary','hd-grenade','hd-strat1','hd-strat2','hd-strat3','hd-strat4'].forEach(id=>{document.getElementById(id).value='';});
+      const ldSec = document.getElementById('hd-loadout-section');
+      const ldChev = document.getElementById('hd-loadout-chevron');
+      if(ldSec) ldSec.style.display='none';
+      if(ldChev) ldChev.textContent='▸';
     }
   }
 }
@@ -5567,6 +5607,14 @@ function closeModal(g){
   document.getElementById('m-'+g).style.display='none';
   editId[g]=null;
   closeAllSD();
+}
+function toggleHDLoadout(){
+  const sec = document.getElementById('hd-loadout-section');
+  const chev = document.getElementById('hd-loadout-chevron');
+  if(!sec) return;
+  const open = sec.style.display !== 'none';
+  sec.style.display = open ? 'none' : 'grid';
+  if(chev) chev.textContent = open ? '▸' : '▾';
 }
 function bgClose(e){
   if(e.target===document.getElementById('mbg')){
@@ -5599,6 +5647,13 @@ function save(g){
     const diff = document.getElementById('hd-diff').value;
     if(!diff){toast('Please select a difficulty');return}
     const oldDate = editId.hd ? db.hd[role].find(d=>d.id===editId.hd)?.date : null;
+    const _ldHelmet  = (document.getElementById('hd-helmet')||{}).value?.trim()||'';
+    const _ldArmor   = (document.getElementById('hd-armor')||{}).value?.trim()||'';
+    const _ldPrimary = (document.getElementById('hd-primary')||{}).value?.trim()||'';
+    const _ldSecondary=(document.getElementById('hd-secondary')||{}).value?.trim()||'';
+    const _ldGrenade = (document.getElementById('hd-grenade')||{}).value?.trim()||'';
+    const _ldStrats  = ['hd-strat1','hd-strat2','hd-strat3','hd-strat4'].map(id=>(document.getElementById(id)||{}).value?.trim()||'').filter(s=>s);
+    const _ldAny = _ldHelmet||_ldArmor||_ldPrimary||_ldSecondary||_ldGrenade||_ldStrats.length;
     const e={
       id:editId.hd??nid.hd++, date:oldDate||new Date().toISOString(),
       difficulty:diff, faction:role,
@@ -5612,6 +5667,7 @@ function save(g){
       stims:+document.getElementById('hd-stims').value||0,
       distance:+document.getElementById('hd-dist').value||0,
       notes:document.getElementById('hd-notes').value.trim(),
+      loadout: _ldAny ? {helmet:_ldHelmet,armor:_ldArmor,primary:_ldPrimary,secondary:_ldSecondary,grenade:_ldGrenade,strats:_ldStrats} : null,
     };
     if(editId.hd!==null){db.hd[role]=db.hd[role].map(d=>d.id===editId.hd?e:d);toast('Mission updated ✓')}
     else{db.hd[role].push(e);toast('Mission logged ✓')}
@@ -6690,7 +6746,7 @@ function buildHDTable(faction, data, color, ck, filterDiff=''){
     const hlAcc = exc && tHD.accuracy60 && +d.shotsFired>750 && (+d.shotsLanded||0)/(+d.shotsFired)>=0.60
       ? `<span class="exc-stat" style="color:${color};font-weight:700">${acc}</span>` : acc;
     return `<tr class="${exc?'exceptional':''}"`+"`${excStyle}>`"+`
-      <td><div style="display:flex;align-items:center;gap:6px">${diffImg(d.difficulty)}<span class="diff-badge ${diffClass(d.difficulty)}">${esc(d.difficulty)}</span></div>${excBadge}</td>
+      <td><div style="display:flex;align-items:center;gap:6px">${diffImg(d.difficulty)}<span class="diff-badge ${diffClass(d.difficulty)}">${esc(d.difficulty)}</span>${d.loadout?`<span title="${['Primary: '+(d.loadout.primary||'—'),'Secondary: '+(d.loadout.secondary||'—'),'Grenade: '+(d.loadout.grenade||'—'),'Stratagems: '+((d.loadout.strats||[]).join(', ')||'—')].join('\n')}" style="cursor:help;font-size:11px;opacity:.7">⚙️</span>`:''}</div>${excBadge}</td>
       <td class="mono">${hlHD('kills',d.kills)}</td><td class="mono">${fmtN(d.deaths)}</td>
       <td class="mono dim">${hlAcc}</td>
       <td class="mono">${d.stratagems}</td><td class="mono">${d.samples}</td>
@@ -8013,6 +8069,77 @@ function renderAnalytics(){
     +'</div>';
   }
 
+  // ── HD Loadout Analytics ────────────────────────────────────────────────────
+  function buildHDLoadoutSection() {
+    const allHD = hdAll.flatMap(r => r.data.filter(d => d.loadout));
+    if (allHD.length < 1) return '';
+
+    function weaponStats(entries, keyFn) {
+      const map = {};
+      entries.forEach(d => {
+        const name = (keyFn(d)||'').trim();
+        if (!name) return;
+        if (!map[name]) map[name] = { count: 0, kills: 0 };
+        map[name].count++;
+        map[name].kills += d.kills || 0;
+      });
+      return Object.entries(map).map(([name, s]) => ({ name, count: s.count, avgKills: +(s.kills/s.count).toFixed(1) }))
+        .sort((a,b) => b.avgKills - a.avgKills).slice(0, 12);
+    }
+
+    const primaryStats = weaponStats(allHD, d => d.loadout.primary);
+    const secondaryStats = weaponStats(allHD, d => d.loadout.secondary);
+    const grenadeStats = weaponStats(allHD, d => d.loadout.grenade);
+
+    // Stratagems: pool all 4 slots
+    const stratMap = {};
+    allHD.forEach(d => {
+      (d.loadout.strats||[]).forEach(s => {
+        const name = s.trim(); if (!name) return;
+        if (!stratMap[name]) stratMap[name] = { count: 0, kills: 0 };
+        stratMap[name].count++;
+        stratMap[name].kills += d.kills || 0;
+      });
+    });
+    const stratStats = Object.entries(stratMap).map(([name, s]) => ({ name, count: s.count, avgKills: +(s.kills/s.count).toFixed(1) }))
+      .sort((a,b) => b.count - a.count).slice(0, 12);
+
+    window._acHDPrimaryLabels = primaryStats.map(x=>x.name);
+    window._acHDPrimaryKills  = primaryStats.map(x=>x.avgKills);
+    window._acHDPrimaryCounts = primaryStats.map(x=>x.count);
+    window._acHDSecLabels     = secondaryStats.map(x=>x.name);
+    window._acHDSecKills      = secondaryStats.map(x=>x.avgKills);
+    window._acHDGrenadeLabels = grenadeStats.map(x=>x.name);
+    window._acHDGrenadeKills  = grenadeStats.map(x=>x.avgKills);
+    window._acHDStratLabels   = stratStats.map(x=>x.name);
+    window._acHDStratCounts   = stratStats.map(x=>x.count);
+
+    const hdLdColor = '#22c55e';
+    return `<div class="analytics-section">
+      <div class="analytics-section-title">Loadout Analytics <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);font-size:10px">${allHD.length} missions with loadout</span></div>
+      ${primaryStats.length ? `<div class="analytics-row">
+        <div class="analytics-chart-card" style="flex:2">
+          <h4>Primary Weapon — Avg Kills</h4>
+          <div style="height:${Math.max(120,primaryStats.length*28)}px"><canvas id="ac-hd-primary-bar"></canvas></div>
+        </div>
+        ${secondaryStats.length ? `<div class="analytics-chart-card" style="flex:1">
+          <h4>Secondary — Avg Kills</h4>
+          <div style="height:${Math.max(120,secondaryStats.length*28)}px"><canvas id="ac-hd-secondary-bar"></canvas></div>
+        </div>` : ''}
+      </div>` : ''}
+      ${stratStats.length ? `<div class="analytics-row" style="margin-top:12px">
+        <div class="analytics-chart-card" style="flex:2">
+          <h4>Most Used Stratagems</h4>
+          <div style="height:${Math.max(120,stratStats.length*28)}px"><canvas id="ac-hd-strat-bar"></canvas></div>
+        </div>
+        ${grenadeStats.length ? `<div class="analytics-chart-card" style="flex:1">
+          <h4>Grenade — Avg Kills</h4>
+          <div style="height:${Math.max(120,grenadeStats.length*28)}px"><canvas id="ac-hd-grenade-bar"></canvas></div>
+        </div>` : ''}
+      </div>` : ''}
+    </div>`;
+  }
+
   const owChartsHtml = buildChartTiles('Overwatch', owAll, 'ow');
   const rvChartsHtml = buildChartTiles('Marvel Rivals', rvAll, 'rv');
   const hdChartsHtml = buildChartTiles('Helldivers 2', hdAll, 'hd') + buildFactionDistSection();
@@ -8511,10 +8638,11 @@ function renderAnalytics(){
 
     <div id="ac-hd" class="subtab-panel" data-group="analytics">
       ${hdChartsHtml}
+      ${buildHDLoadoutSection()}
       <div class="analytics-section">
-        <div class="analytics-section-title">All-Role Summary</div>
+        <div class="analytics-section-title">All-Faction Summary</div>
         <div class="analytics-table-wrap"><table class="analytics-table">
-          <thead><tr><th>Role</th><th>Sessions</th><th>Avg K</th><th>Avg DMG</th><th>Avg Deaths</th><th>Avg K/D</th></tr></thead>
+          <thead><tr><th>Faction</th><th>Sessions</th><th>Avg K</th><th>Avg DMG</th><th>Avg Deaths</th><th>Avg K/D</th></tr></thead>
           <tbody>${hdTableRows.join('')}</tbody>
         </table></div>
       </div>
@@ -8751,6 +8879,24 @@ function renderAnalytics(){
                      tooltip: { backgroundColor: tipBg, padding: 8 } } }
       });
     }
+    // HD: loadout charts
+    function drawHDLoadoutBar(canvasId, labels, values, label, color) {
+      const el = document.getElementById(canvasId); if (!el || !labels || !labels.length) return;
+      if (analyticsCharts[canvasId]) analyticsCharts[canvasId].destroy();
+      analyticsCharts[canvasId] = new Chart(el.getContext('2d'), {
+        type: 'bar',
+        data: { labels, datasets: [{ label, data: values,
+          backgroundColor: color+'bb', borderColor: color, borderWidth: 1, borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { backgroundColor: tipBg, padding: 8 } },
+          scales: { x: { grid: { color: gridC }, ticks: { color: tickC, font: { size: 10 } }, beginAtZero: true },
+                    y: { grid: { display: false }, ticks: { color: tickC, font: { size: 11 }, maxTicksLimit: 12 } } } }
+      });
+    }
+    drawHDLoadoutBar('ac-hd-primary-bar',   window._acHDPrimaryLabels,  window._acHDPrimaryKills,  'Avg Kills', '#22c55e');
+    drawHDLoadoutBar('ac-hd-secondary-bar', window._acHDSecLabels,      window._acHDSecKills,      'Avg Kills', '#10b981');
+    drawHDLoadoutBar('ac-hd-grenade-bar',   window._acHDGrenadeLabels,  window._acHDGrenadeKills,  'Avg Kills', '#f59e0b');
+    drawHDLoadoutBar('ac-hd-strat-bar',     window._acHDStratLabels,    window._acHDStratCounts,   'Uses',      '#a78bfa');
   }, 0);
 }
 
