@@ -5209,8 +5209,15 @@ function getLogoSrc(role){
   const id = 'logo_' + role.replace(/[^a-zA-Z0-9]/g,'_');
   return (typeof __BASE__!=='undefined'?__BASE__:'') + 'sprites/' + id + '.png';
 }
+var _DIFF_ID_MAP = {
+  'trivial':'diff_1___Trivial','easy':'diff_2___Easy','medium':'diff_3___Medium',
+  'challenging':'diff_4___Challenging','hard':'diff_5___Hard','extreme':'diff_6___Extreme',
+  'suicidemission':'diff_7___Suicide_Mission','impossible':'diff_8___Impossible',
+  'helldive':'diff_9___Helldive','superhelldive':'diff_10___Super_Helldive'
+};
 function getDiffLogoSrc(diff){
-  const id = 'diff_' + diff.replace(/[^a-zA-Z0-9]/g,'_');
+  const key = (diff||'').toLowerCase().replace(/[^a-z]/g,'');
+  const id = _DIFF_ID_MAP[key] || ('diff_' + (diff||'').replace(/[^a-zA-Z0-9]/g,'_'));
   return (typeof __BASE__!=='undefined'?__BASE__:'') + 'sprites/' + id + '.svg';
 }
 function diffImg(diff){
