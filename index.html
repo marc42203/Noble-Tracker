@@ -6571,7 +6571,7 @@ function renderHeroRole(g, role){
   const filterHtml = n>1 ? `<div class="filter-bar">
     <label>Filter</label>
     <select class="filter-select" id="filter-${ck}" onchange="applyFilter('${g}','${role}')">
-      <option value=">All characters (${n})</option>
+      <option value="">All characters (${n})</option>
       ${chars.map(c=>`<option value="${c}">${c}</option>`).join('')}
     </select>
     <button class="filter-clear" onclick="clearFilter('${g}','${role}')">✕ Clear</button>
@@ -14973,6 +14973,12 @@ if ('serviceWorker' in navigator) {
       if(!newDb.racing[g].cars)   newDb.racing[g].cars=[];
     });
     db=newDb;
+    // Normalize legacy misspelling
+    ['ow','rv'].forEach(function(g){
+      Object.keys(db[g]).forEach(function(role){
+        db[g][role].forEach(function(d){ if(d.char==='Rammatra') d.char='Ramattra'; });
+      });
+    });
     // Reset counters
     nid.ow=1; nid.rv=1; nid.hd=1; nid.racing=1;
     ['ow','rv','hd'].forEach(function(g){
