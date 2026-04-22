@@ -1,9 +1,12 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   root: '.',
-  base: '/Noble-Tracker/',
+  base: command === 'build' ? '/Noble-Tracker/' : '/',
   publicDir: 'public',
+  define: {
+    __BASE__: JSON.stringify(command === 'build' ? '/Noble-Tracker/' : '/'),
+  },
   build: {
     outDir: 'dist',
   },
@@ -14,4 +17,4 @@ export default defineConfig({
       'Cross-Origin-Opener-Policy': 'same-origin-allow-popups'
     }
   }
-});
+}));
