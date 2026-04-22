@@ -1,0 +1,23 @@
+{
+  "name": "NOBLE Tracker",
+  "short_name": "NOBLE",
+  "description": "Game session tracker for OW, Rivals, HD2, MC & Showdown",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "icons": [
+    {
+      "src": "/sprites/noble_logo_192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/sprites/noble_logo_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
